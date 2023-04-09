@@ -1,10 +1,15 @@
-var createError = require("http-errors");
-var path = require("path");
-var cookieParser = require("cookie-parser");
-var logger = require("morgan");
-const http = require("http");
-const express = require("express");
-const { Server } = require("socket.io");
+import createError from "http-errors";
+import path from "path";
+import cookieParser from "cookie-parser";
+import logger from "morgan";
+import http from "http";
+import express from "express";
+import { Server } from "socket.io";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+dotenv.config();
+
+const __dirname = path.resolve();
 
 const app = express();
 const server = http.createServer(app);
@@ -20,10 +25,15 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
-// var indexRouter = require("./routes/index");
-// var usersRouter = require("./routes/users");
-// app.use('/', indexRouter);
-// app.use("/users", usersRouter);
+const { MONGODB_URI } = process.env;
+mongoose.Promise = global.Promise;
+mongoose
+  .connect(MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.log("Could not connect to MongoDB", err));
 
 io.on("connection", (socket) => {
   console.log("a user connected");
@@ -36,6 +46,11 @@ io.on("connection", (socket) => {
     console.log("user disconnected");
   });
 });
+
+import { existsRouter, signinRouter, signupRouter } from "./routes/account/index.js";
+app.use("/account/exists", existsRouter);
+app.use("/account/signup", signupRouter);
+app.use("/account/signin", signinRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
