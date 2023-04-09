@@ -20,11 +20,17 @@ router.post("/", async function (req, res, next) {
   try {
     const account = await Account.findUser({ userid }).exec();
     const verified = account.verifyPassword(password);
-    return res.status(200).json({verified});
+    return res.status(200).json({
+      success: verified,
+      account: {
+        _id: account._id,
+        userid: account.userid,
+        phone: account.phone,
+      }
+    });
   } catch {
     return res.status(500).send({ message: "Internal Server Error" });
   }
-
 });
 
 export default router;

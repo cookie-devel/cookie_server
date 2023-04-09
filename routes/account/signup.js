@@ -24,7 +24,11 @@ router.post("/", async (req, res, next) => {
     const result = await Account.createAccount(req.body);
     return res.status(201).json({
       success: true,
-      result,
+      account: {
+        _id: result._id,
+        userid: result.userid,
+        username: result.username,
+      },
     });
   } catch (e) {
     return res.status(500).json({
