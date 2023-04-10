@@ -7,6 +7,13 @@ import express from "express";
 import { Server } from "socket.io";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import socketioHandler from "./modules/socketio.handler.js";
+import {
+  existsRouter,
+  signinRouter,
+  signupRouter,
+} from "./routes/account/index.js";
+
 dotenv.config();
 
 const __dirname = path.resolve();
@@ -14,6 +21,7 @@ const __dirname = path.resolve();
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+socketioHandler(io);
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
@@ -25,6 +33,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
+// MongoDB
 const { MONGODB_URI } = process.env;
 mongoose.Promise = global.Promise;
 mongoose
@@ -35,19 +44,6 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.log("Could not connect to MongoDB", err));
 
-io.on("connection", (socket) => {
-  console.log("a user connected");
-
-  socket.on("chat message", (msg) => {
-    io.emit("chat message", msg);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("user disconnected");
-  });
-});
-
-import { existsRouter, signinRouter, signupRouter } from "./routes/account/index.js";
 app.use("/account/exists", existsRouter);
 app.use("/account/signup", signupRouter);
 app.use("/account/signin", signinRouter);
