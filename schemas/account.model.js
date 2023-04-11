@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
 import Joi from "joi";
+import jwt from "jsonwebtoken";
 
 function hash(password) {
   return crypto
@@ -58,8 +59,6 @@ const accountSchema = new Schema(
   }
 );
 
-
-
 accountSchema.statics.createAccount = async function ({
   userid,
   password,
@@ -90,6 +89,23 @@ accountSchema.statics.findUser = function ({ userid, phone }) {
   Object.keys(obj).forEach((key) => obj[key] === undefined && delete obj[key]);
 
   return this.findOne(obj);
+};
+
+accountSchema.methods.generateJWT = function () {
+  return jwt.sign(
+    {
+      _id: this._id,
+      userid: this.userid,
+      username: this.username,
+    },
+    process.env.JWT_SECRET_KEY,
+    {
+      algorithm: "HS256",
+      expiresIn: "7d",
+      issuer: process.env.BASE_URI,
+      subject: "userInfo",
+    }
+  );
 };
 
 accountSchema.methods.verifyPassword = function (password) {
