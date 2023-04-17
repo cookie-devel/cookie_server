@@ -1,6 +1,7 @@
 import express from "express";
 import Joi from "joi";
 import Account from "../../schemas/account.model.js";
+import jwt from "jsonwebtoken"
 const router = express.Router();
 
 const schema = Joi.object({
@@ -26,7 +27,8 @@ router.post("/", async function (req, res, next) {
         _id: account._id,
         userid: account.userid,
         phone: account.phone,
-      }
+      },
+      token: account.generateJWT(),
     });
   } catch {
     return res.status(500).send({ message: "Internal Server Error" });

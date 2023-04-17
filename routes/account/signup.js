@@ -29,6 +29,7 @@ router.post("/", async (req, res, next) => {
         userid: result.userid,
         username: result.username,
       },
+      token: account.generateJWT(),
     });
   } catch (e) {
     return res.status(500).json({
