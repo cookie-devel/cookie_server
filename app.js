@@ -5,25 +5,42 @@ import logger from "morgan";
 import http from "http";
 import express from "express";
 import { Server } from "socket.io";
+import { instrument } from "@socket.io/admin-ui";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import jade from "jade";
+import bcrypto from "bcryptjs";
 dotenv.config();
 
 const __dirname = path.resolve();
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  transports: ['websocket', 'polling'], 
+  allowEIO3: true,
+});
 
+instrument(io, {
+  auth: {
+    type: "basic",
+    username: "parkjb",
+    password: bcrypto.hashSync(process.env.SOCKETIO_PW_HASH_KEY, 10),
+  },
+  namespaceName: "/admin",
+  mode: "development",
+})
+
+app.use(express.static(path.join(__dirname, "public")));
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "jade");
+// app.engine("jade", jade.__express);
 
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "public")));
 
 const { MONGODB_URI } = process.env;
 mongoose.Promise = global.Promise;
