@@ -9,7 +9,7 @@ import { instrument } from "@socket.io/admin-ui";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import bcrypto from "bcryptjs";
-import socketioHandler from "./modules/socketio/handler.js";
+import socketioHandler from "./modules/socket.io/handler.js";
 import {
   existsRouter,
   signinRouter,
