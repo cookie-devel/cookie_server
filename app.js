@@ -8,9 +8,8 @@ import { Server } from "socket.io";
 import { instrument } from "@socket.io/admin-ui";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import jade from "jade";
 import bcrypto from "bcryptjs";
-import socketioHandler from "./modules/socketio.handler.js";
+import socketioHandler from "./modules/socketio/handler.js";
 import {
   existsRouter,
   signinRouter,
@@ -23,11 +22,13 @@ const __dirname = path.resolve();
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
-  transports: ['websocket', 'polling'], 
-  allowEIO3: true,
+  cors: {
+    origin: ["https://admin.socket.io"],
+    credentials: true,
+  }
 });
-const io = new Server(server);
 socketioHandler(io);
 
 instrument(io, {
@@ -44,7 +45,6 @@ app.use(express.static(path.join(__dirname, "public")));
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "jade");
-// app.engine("jade", jade.__express);
 
 app.use(logger("dev"));
 app.use(express.json());
@@ -52,10 +52,9 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 // MongoDB
-const { MONGODB_URI } = process.env;
 mongoose.Promise = global.Promise;
 mongoose
-  .connect(MONGODB_URI, {
+  .connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -82,6 +81,6 @@ app.use(function (err, req, res, next) {
   res.render("error");
 });
 
-server.listen(3000, () => {
-  console.log("listening on *:3000");
+server.listen(process.env.PORT, () => {
+  console.log(`listening on *:${process.env.PORT}`);
 });
