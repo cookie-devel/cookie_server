@@ -25,11 +25,9 @@ router.post("/", async (req, res, next) => {
     return res.status(201).json({
       success: true,
       account: {
-        _id: result._id,
         userid: result.userid,
         username: result.username,
       },
-      token: account.generateJWT(),
     });
   } catch (e) {
     return res.status(500).json({

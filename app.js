@@ -25,7 +25,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["https://admin.socket.io"],
+    origin: ["https://admin.socket.io", "http://localhost:8080"],
     credentials: true,
   }
 });
