@@ -21,15 +21,20 @@ router.post("/", async function (req, res, next) {
   try {
     const account = await Account.findUser({ userid }).exec();
     const verified = account.verifyPassword(password);
-    return res.status(200).json({
-      success: verified,
-      account: {
-        userid: account.userid,
-        phone: account.phone,
-        friendList: account.friendList,
-      },
-      access_token: account.generateJWT(),
-    });
+    if (verified)
+      return res.status(200).json({
+        success: verified,
+        account: {
+          userid: account.userid,
+          phone: account.phone,
+          friendList: account.friendList,
+        },
+        access_token: account.generateJWT(),
+      });
+    else
+      return res
+        .status(401)
+        .json({ success: verified, message: "Unauthorized" });
   } catch {
     return res.status(500).send({ message: "Internal Server Error" });
   }
