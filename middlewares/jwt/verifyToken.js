@@ -1,7 +1,8 @@
 import jwt from "jsonwebtoken";
 
 const verifyToken = (req, res, next) => {
-  const token = req.headers["x-access-token"];
+  const token = req.headers["authorization"];
+
 
   if (!token) {
     return res.status(403).json({
@@ -11,9 +12,7 @@ const verifyToken = (req, res, next) => {
   }
 
   try {
-    console.log(process.env.JWT_SECRET_KEY);
-    req.decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    console.log(req.decoded);
+    req.decoded = jwt.verify(token.replace("Bearer ", ""), process.env.JWT_SECRET_KEY);
     return next();
   } catch (e) {
     if (e.name === "TokenExpireError") {
