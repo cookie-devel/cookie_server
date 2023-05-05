@@ -16,6 +16,8 @@ import {
   signupRouter,
 } from "./routes/account/index.js";
 
+import friendsRouter from "./routes/friends/index.js";
+
 dotenv.config();
 
 const __dirname = path.resolve();
@@ -64,6 +66,8 @@ mongoose
 app.use("/account/exists", existsRouter);
 app.use("/account/signup", signupRouter);
 app.use("/account/signin", signinRouter);
+
+app.use("/friends", friendsRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
