@@ -25,9 +25,9 @@ router.post("/", async function (req, res, next) {
       return res.status(200).json({
         success: verified,
         account: {
-          userid: account.userid,
+          userid: account._id,
           phone: account.phone,
-          friendList: account.friendList,
+          friendList: await account.getFriends(),
         },
         access_token: account.generateJWT(),
       });
@@ -35,7 +35,8 @@ router.post("/", async function (req, res, next) {
       return res
         .status(401)
         .json({ success: verified, message: "Unauthorized" });
-  } catch {
+  } catch (e) {
+    console.error(e);
     return res.status(500).send({ message: "Internal Server Error" });
   }
 });

@@ -20,7 +20,7 @@ router.get("/", async (req, res, next) => {
   }
 
   try {
-    const found_account = await Account.findUser({ userid, phone }).exec();
+    const found_account = await Account.findUser({ userid, phone }).lean();
 
     return await res.status(200).send({
       query: req.query,

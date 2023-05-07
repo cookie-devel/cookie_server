@@ -15,8 +15,6 @@ const accountSchema = new Schema(
   {
     _id: {
       type: String,
-      required: true,
-      unique: true,
     },
     password: {
       type: String,
@@ -59,6 +57,48 @@ const accountSchema = new Schema(
     timestamps: true,
   }
 );
+
+// accountSchema.virtual("userid").get(function () {
+//   return this._id;
+// });
+
+// accountSchema.set("toJSON", {
+//   virtuals: true,
+//   // transform: function (doc, ret, options) {
+//   //   delete ret._id;
+//   //   delete ret.password;
+//   //   delete ret.__v;
+//   //   return ret;
+//   // },
+// });
+// accountSchema.set("toObject", {
+//   virtuals: true,
+// });
+
+const transform = function (doc, ret, options) {
+  // delete ret.password;
+  // delete ret.__v;
+
+  // rename _id to userid
+  ret.userid = doc._id;
+  delete ret._id;
+};
+
+accountSchema.set("toObject", { transform });
+accountSchema.set("toJSON", { transform });
+
+// accountSchema.set("toJSON", {
+//   transform: function (doc, ret, options) {
+//     // delete ret.password;
+//     // delete ret.__v;
+
+//     // rename _id to userid
+//     ret.userid = doc._id;
+//     delete ret._id;
+
+//     return ret;
+//   },
+// });
 
 accountSchema.statics.createAccount = async function ({
   userid,
@@ -118,7 +158,6 @@ accountSchema.methods.getProfile = function () {
 };
 
 accountSchema.statics.getFriends = async function (userid) {
-  console.log(userid);
   const result = await Account.aggregate([
     {
       $match: {
@@ -138,9 +177,10 @@ accountSchema.statics.getFriends = async function (userid) {
     },
     {
       $project: {
-        _id: 1,
+        _id: 0,
+        userid: "$_id",
         friendList: {
-          _id: 1,
+          userid: "$_id",
           username: 1,
           profile: 1,
         },
@@ -148,11 +188,13 @@ accountSchema.statics.getFriends = async function (userid) {
     },
   ]);
 
-  return result[0];
+  return result[0]["friendList"];
 };
 
 accountSchema.methods.getFriends = async function () {
-  return await Account.getFriends(this._id);
+  return (await this.populate("friendList", "_id username profile"))[
+    "friendList"
+  ];
 };
 
 const Account = mongoose.model("Account", accountSchema);

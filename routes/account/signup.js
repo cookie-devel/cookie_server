@@ -25,11 +25,12 @@ router.post("/", async (req, res, next) => {
     return res.status(201).json({
       success: true,
       account: {
-        userid: result.userid,
+        userid: result._id,
         username: result.username,
       },
     });
   } catch (e) {
+    console.error(e);
     return res.status(500).json({
       success: false,
       e,

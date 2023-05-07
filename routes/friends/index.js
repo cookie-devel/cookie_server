@@ -13,11 +13,18 @@ router.get("/", verifyToken, async (req, res) => {
       result: friendList,
     });
   } catch (e) {
+    console.error(e);
     return res.status(500).send({
       code: 500,
       message: e,
     });
   }
+
+  // const friend = await Account.findById(req.decoded["userid"]).exec();
+  // return res.status(200).send({
+  //   success: true,
+  //   result: await friend.getFriends(),
+  // });
 });
 
 export default router;
