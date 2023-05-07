@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
-import Joi from "joi";
 import jwt from "jsonwebtoken";
 
 function hash(password) {
@@ -14,7 +13,7 @@ const { Schema } = mongoose;
 
 const accountSchema = new Schema(
   {
-    userid: {
+    _id: {
       type: String,
       required: true,
       unique: true,
@@ -45,10 +44,12 @@ const accountSchema = new Schema(
         message: "Hello, I'm new here!",
       },
     },
-    friendList: {
-      type: Array,
-      required: false,
-    },
+    friendList: [
+      {
+        type: String,
+        ref: "Account",
+      },
+    ],
     chatList: {
       type: Array,
       required: false,
@@ -68,7 +69,7 @@ accountSchema.statics.createAccount = async function ({
   profile,
 }) {
   const account = new this({
-    userid,
+    _id: userid,
     password: hash(password),
     username,
     birthday,
@@ -84,7 +85,7 @@ accountSchema.statics.createAccount = async function ({
 };
 
 accountSchema.statics.findUser = function ({ userid, phone }) {
-  const obj = { userid, phone };
+  const obj = { _id: userid, phone };
 
   Object.keys(obj).forEach((key) => obj[key] === undefined && delete obj[key]);
 
@@ -94,8 +95,7 @@ accountSchema.statics.findUser = function ({ userid, phone }) {
 accountSchema.methods.generateJWT = function () {
   return jwt.sign(
     {
-      _id: this._id,
-      userid: this.userid,
+      userid: this._id,
       username: this.username,
     },
     process.env.JWT_SECRET_KEY,
@@ -115,6 +115,44 @@ accountSchema.methods.verifyPassword = function (password) {
 
 accountSchema.methods.getProfile = function () {
   return this.profile;
+};
+
+accountSchema.statics.getFriends = async function (userid) {
+  console.log(userid);
+  const result = await Account.aggregate([
+    {
+      $match: {
+        _id: userid,
+      },
+    },
+    {
+      $limit: 1,
+    },
+    {
+      $lookup: {
+        from: "accounts",
+        localField: "friendList",
+        foreignField: "_id",
+        as: "friendList",
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        friendList: {
+          _id: 1,
+          username: 1,
+          profile: 1,
+        },
+      },
+    },
+  ]);
+
+  return result[0];
+};
+
+accountSchema.methods.getFriends = async function () {
+  return await Account.getFriends(this._id);
 };
 
 const Account = mongoose.model("Account", accountSchema);

@@ -6,12 +6,11 @@ const router = express.Router();
 
 router.get("/", verifyToken, async (req, res) => {
   try {
-    const found_account = await Account.findUser({
-      userid: req.decoded["userid"],
-    }).exec();
-    return await res.status(200).send({
+    const friendList = await Account.getFriends(req.decoded["userid"]);
+
+    return res.status(200).send({
       success: true,
-      result: found_account.friendList,
+      result: friendList,
     });
   } catch (e) {
     return res.status(500).send({
