@@ -23,4 +23,4 @@ class InMemorySessionStore extends SessionStore {
   }
 }
 
-export { InMemorySessionStore }
+export { InMemorySessionStore };

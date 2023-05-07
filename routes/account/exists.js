@@ -27,7 +27,6 @@ router.get("/", async (req, res, next) => {
       result: !(found_account === null),
       message: found_account === null ? "Not Found" : "Already Exists",
     });
-
   } catch (e) {
     return res.status(500).send(e);
   }

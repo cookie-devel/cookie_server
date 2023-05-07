@@ -29,7 +29,7 @@ const io = new Server(server, {
   cors: {
     origin: ["https://admin.socket.io", "http://localhost:8080"],
     credentials: true,
-  }
+  },
 });
 socketioHandler(io);
 
@@ -41,7 +41,7 @@ instrument(io, {
   },
   namespaceName: "/admin",
   mode: "development",
-})
+});
 
 app.use(express.static(path.join(__dirname, "public")));
 // view engine setup

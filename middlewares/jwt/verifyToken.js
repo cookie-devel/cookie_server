@@ -3,7 +3,6 @@ import jwt from "jsonwebtoken";
 const verifyToken = (req, res, next) => {
   const token = req.headers["authorization"];
 
-
   if (!token) {
     return res.status(403).json({
       code: 403,
@@ -12,7 +11,10 @@ const verifyToken = (req, res, next) => {
   }
 
   try {
-    req.decoded = jwt.verify(token.replace("Bearer ", ""), process.env.JWT_SECRET_KEY);
+    req.decoded = jwt.verify(
+      token.replace("Bearer ", ""),
+      process.env.JWT_SECRET_KEY
+    );
     return next();
   } catch (e) {
     if (e.name === "TokenExpireError") {

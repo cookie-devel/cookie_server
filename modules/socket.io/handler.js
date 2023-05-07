@@ -19,7 +19,7 @@ export default (io) => {
     const username = socket.handshake.auth.username;
     console.log(socket.handshake.auth);
     if (!username) {
-      console.log("invalid username")
+      console.log("invalid username");
       return next(new Error("invalid username"));
     }
     console.log(socket);
