@@ -12,6 +12,7 @@ import bcrypto from "bcryptjs";
 import socketioHandler from "./modules/socket.io/handler.js";
 import {
   existsRouter,
+  profileRouter,
   signinRouter,
   signupRouter,
 } from "./routes/account/index.js";
@@ -44,6 +45,8 @@ instrument(io, {
 });
 
 app.use(express.static(path.join(__dirname, "public")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "jade");
@@ -66,6 +69,7 @@ mongoose
 app.use("/account/exists", existsRouter);
 app.use("/account/signup", signupRouter);
 app.use("/account/signin", signinRouter);
+app.use("/account/profile", profileRouter);
 
 app.use("/friends", friendsRouter);
 

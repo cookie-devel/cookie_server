@@ -1,8 +1,13 @@
 import express from "express";
 import Joi from "joi";
+import multer from "multer";
+import Account from "../../schemas/account.model.js";
+import fs from "fs";
+import path from "path";
+
 const router = express.Router();
 
-import Account from "../../schemas/account.model.js";
+// TODO: https://dev.to/tayfunakgc/middleware-based-joi-validation-in-expressjs-2po5
 
 const schema = Joi.object({
   userid: Joi.string().min(6).max(30).required(),
@@ -10,10 +15,26 @@ const schema = Joi.object({
   username: Joi.string().min(1).max(10).required(),
   birthday: Joi.date().required(),
   phone: Joi.string().min(11).max(11).required(),
-  profile: Joi.object(),
 });
 
-router.post("/", async (req, res, next) => {
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const userid = req.body.userid;
+    const path = `uploads/${userid}/`;
+    fs.mkdirSync(path, { recursive: true });
+    cb(null, path);
+  },
+  filename: function (req, file, cb) {
+    const userid = req.body.userid;
+    const ext = path.extname(file.originalname);
+
+    cb(null, `${userid}.profile.${new Date().valueOf()}${ext}`);
+  },
+});
+
+const upload = multer({ storage });
+
+router.post("/", upload.single("profile_image"), async (req, res, next) => {
   try {
     await schema.validateAsync(req.body);
   } catch (e) {
@@ -21,7 +42,13 @@ router.post("/", async (req, res, next) => {
   }
 
   try {
-    const result = await Account.createAccount(req.body);
+    const result = await Account.createAccount({
+      ...req.body,
+      profile: {
+        image: req.file ? req.file.path : null,
+        message: null,
+      },
+    });
     return res.status(201).json({
       success: true,
       account: {

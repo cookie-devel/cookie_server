@@ -17,12 +17,12 @@ export default (io) => {
 
     // UserName
     const username = socket.handshake.auth.username;
-    console.log(socket.handshake.auth);
+    // console.log(socket.handshake.auth);
     if (!username) {
       console.log("invalid username");
       return next(new Error("invalid username"));
     }
-    console.log(socket);
+    // console.log(socket);
     socket.sessionID = io.engine.generateId();
     socket.userID = io.engine.generateId();
     socket.username = username;
