@@ -1,5 +1,5 @@
 import express from "express";
-import Account from "../../schemas/account.model.js";
+import Account from "../../schemas/account.model";
 import Joi from "joi";
 const router = express.Router();
 
@@ -15,7 +15,7 @@ router.get("/", async (req, res, next) => {
 
   try {
     await schema.validateAsync(req.query);
-  } catch (e) {
+  } catch (e: any) {
     return res.status(400).json({ message: e.message });
   }
 

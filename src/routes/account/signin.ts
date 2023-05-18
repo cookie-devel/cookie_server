@@ -1,6 +1,6 @@
 import express from "express";
 import Joi from "joi";
-import Account from "../../schemas/account.model.js";
+import Account from "../../schemas/account.model";
 
 const router = express.Router();
 
@@ -14,7 +14,7 @@ router.post("/", async function (req, res, next) {
 
   try {
     await schema.validateAsync(req.body);
-  } catch (e) {
+  } catch (e: any) {
     return res.status(400).json({ message: e.message });
   }
 
@@ -28,6 +28,7 @@ router.post("/", async function (req, res, next) {
           userid: account._id,
           phone: account.phone,
           friendList: await account.getFriends(),
+          profile: account.profile,
         },
         access_token: account.generateJWT(),
       });

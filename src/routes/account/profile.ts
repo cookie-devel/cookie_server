@@ -1,7 +1,7 @@
 import multer from "multer";
 import express from "express";
 import path from "path";
-import verifyToken from "../../middlewares/jwt/verifyToken.js";
+import { verifyToken } from "../../middlewares/jwt/verifyToken";
 import fs from "fs";
 
 const storage = multer.diskStorage({

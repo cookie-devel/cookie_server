@@ -1,6 +1,7 @@
 import express from "express";
-import verifyToken from "../../middlewares/jwt/verifyToken.js";
-import Account from "../../schemas/account.model.js";
+import { verifyToken } from "../../middlewares/jwt/verifyToken";
+import Account from "../../schemas/account.model";
+import type { Model } from "mongoose";
 
 const router = express.Router();
 

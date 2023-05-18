@@ -1,7 +1,7 @@
 import express from "express";
 import Joi from "joi";
 import multer from "multer";
-import Account from "../../schemas/account.model.js";
+import Account from "../../schemas/account.model";
 import fs from "fs";
 import path from "path";
 
@@ -37,7 +37,7 @@ const upload = multer({ storage });
 router.post("/", upload.single("profile_image"), async (req, res, next) => {
   try {
     await schema.validateAsync(req.body);
-  } catch (e) {
+  } catch (e: any) {
     return res.status(400).json({ message: e.message });
   }
 

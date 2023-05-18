@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import type { Model, QueryWithHelpers } from "mongoose";
 
-function hash(password) {
+function hash(password: string) {
   return crypto
-    .createHmac("sha256", process.env.PASSWORD_HASH_KEY)
+    .createHmac("sha256", process.env.PASSWORD_HASH_KEY!)
     .update(password)
     .digest("hex");
 }
@@ -75,10 +76,7 @@ const accountSchema = new Schema(
 //   virtuals: true,
 // });
 
-const transform = function (doc, ret, options) {
-  // delete ret.password;
-  // delete ret.__v;
-
+const transform = function (doc: any, ret: any, options: any) {
   // rename _id to userid
   ret.userid = doc._id;
   delete ret._id;
@@ -86,19 +84,6 @@ const transform = function (doc, ret, options) {
 
 accountSchema.set("toObject", { transform });
 accountSchema.set("toJSON", { transform });
-
-// accountSchema.set("toJSON", {
-//   transform: function (doc, ret, options) {
-//     // delete ret.password;
-//     // delete ret.__v;
-
-//     // rename _id to userid
-//     ret.userid = doc._id;
-//     delete ret._id;
-
-//     return ret;
-//   },
-// });
 
 accountSchema.statics.createAccount = async function ({
   userid,
@@ -127,7 +112,11 @@ accountSchema.statics.createAccount = async function ({
 accountSchema.statics.findUser = function ({ userid, phone }) {
   const obj = { _id: userid, phone };
 
-  Object.keys(obj).forEach((key) => obj[key] === undefined && delete obj[key]);
+  Object.keys(obj).forEach(
+    (key) =>
+      obj[key as keyof typeof obj] === undefined &&
+      delete obj[key as keyof typeof obj]
+  );
 
   return this.findOne(obj);
 };
@@ -138,7 +127,7 @@ accountSchema.methods.generateJWT = function () {
       userid: this._id,
       username: this.username,
     },
-    process.env.JWT_SECRET_KEY,
+    process.env.JWT_SECRET_KEY!,
     {
       algorithm: "HS256",
       expiresIn: "7d",
@@ -148,7 +137,7 @@ accountSchema.methods.generateJWT = function () {
   );
 };
 
-accountSchema.methods.verifyPassword = function (password) {
+accountSchema.methods.verifyPassword = function (password: string) {
   const hashed = hash(password);
   return this.password === hashed;
 };
@@ -197,6 +186,24 @@ accountSchema.methods.getFriends = async function () {
   ];
 };
 
-const Account = mongoose.model("Account", accountSchema);
+// methods
+interface IAccountDocument {
+  getFriends: typeof accountSchema.methods.getFriends;
+  generateJWT: typeof accountSchema.methods.generateJWT;
+  verifyPassword: typeof accountSchema.methods.verifyPassword;
+  getProfile: typeof accountSchema.methods.getProfile
+}
+
+// statics
+interface IAccountModel extends Model<IAccountDocument> {
+  getFriends: typeof accountSchema.statics.getFriends;
+  createAccount: typeof accountSchema.statics.createAccount;
+  findUser: typeof accountSchema.statics.findUser;
+}
+
+const Account: IAccountModel = mongoose.model<IAccountDocument, IAccountModel>(
+  "Account",
+  accountSchema
+);
 
 export default Account;

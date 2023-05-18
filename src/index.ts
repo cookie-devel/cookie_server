@@ -9,19 +9,20 @@ import { instrument } from "@socket.io/admin-ui";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import bcrypto from "bcryptjs";
-import socketioHandler from "./modules/socket.io/handler.js";
+import socketioHandler from "./modules/socket.io/handler";
 import {
   existsRouter,
   profileRouter,
   signinRouter,
   signupRouter,
-} from "./routes/account/index.js";
+} from "./routes/account/index";
+import type { NextFunction, Request, Response } from "express";
 
-import friendsRouter from "./routes/friends/index.js";
+import friendsRouter from "./routes/friends/index";
 
 dotenv.config();
 
-const __dirname = path.resolve();
+// const __dirname = path.resolve();
 
 const app = express();
 const server = http.createServer(app);
@@ -38,7 +39,7 @@ instrument(io, {
   auth: {
     type: "basic",
     username: "parkjb",
-    password: bcrypto.hashSync(process.env.SOCKETIO_PW_HASH_KEY, 10),
+    password: bcrypto.hashSync(process.env.SOCKETIO_PW_HASH_KEY!, 10),
   },
   namespaceName: "/admin",
   mode: "development",
@@ -59,9 +60,9 @@ app.use(cookieParser());
 // MongoDB
 mongoose.Promise = global.Promise;
 mongoose
-  .connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+  .connect(process.env.MONGODB_URI!, {
+    // useNewUrlParser: true,
+    // useUnifiedTopology: true,
   })
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.log("Could not connect to MongoDB", err));
@@ -79,7 +80,7 @@ app.use(function (req, res, next) {
 });
 
 // error handler
-app.use(function (err, req, res, next) {
+app.use(function (err: any, req: Request, res: Response, next: NextFunction) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get("env") === "development" ? err : {};
