@@ -59,23 +59,6 @@ const accountSchema = new Schema(
   }
 );
 
-// accountSchema.virtual("userid").get(function () {
-//   return this._id;
-// });
-
-// accountSchema.set("toJSON", {
-//   virtuals: true,
-//   // transform: function (doc, ret, options) {
-//   //   delete ret._id;
-//   //   delete ret.password;
-//   //   delete ret.__v;
-//   //   return ret;
-//   // },
-// });
-// accountSchema.set("toObject", {
-//   virtuals: true,
-// });
-
 const transform = function (doc: any, ret: any, options: any) {
   // rename _id to userid
   ret.userid = doc._id;

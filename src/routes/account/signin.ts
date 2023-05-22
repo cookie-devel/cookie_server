@@ -26,6 +26,7 @@ router.post("/", async function (req, res, next) {
         success: verified,
         account: {
           userid: account._id,
+          username: account.username,
           phone: account.phone,
           friendList: await account.getFriends(),
           profile: account.profile,

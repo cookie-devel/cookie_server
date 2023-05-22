@@ -6,16 +6,10 @@ import type { DefaultEventsMap } from "socket.io/dist/typed-events";
 import { ExtendedError } from "socket.io/dist/namespace";
 const sessionStore = new InMemorySessionStore();
 
-// interface ExtendedSocket extends Socket {
-//   sessionID: string;
-//   userID: string;
-//   username: string;
-//   decoded?: any;
-// }
-
 export default (
   io: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
 ) => {
+  // Handshake JWT Authentication
   io.use((socket, next) => {
     // Authentication
     if (socket.handshake.auth && socket.handshake.auth.token) {
@@ -23,53 +17,21 @@ export default (
         socket.handshake.auth.token,
         process.env.JWT_SECRET_KEY!,
         (err, decoded) => {
-          if (err) return next(new Error("Authentication error"));
-          socket.data.decoded = decoded;
+          if (err || !decoded) return next(new Error("Authentication error"));
+          if (!decoded["userid"] || !decoded["username"])
+            return next(new Error("Invalid Token"));
+          socket.data.userID = decoded["userid"];
+          socket.data.userName = decoded["username"];
           next();
         }
       );
     } else next(new Error("Authentication error"));
-
-    // Session
-    const sessionID = socket.handshake.auth.sessionID;
-    if (!sessionID) {
-      const session = sessionStore.findSession(sessionID);
-      if (session) {
-        socket.data.sessionID = sessionID;
-        socket.data.userID = session.userID;
-        socket.data.username = session.username;
-        return next();
-      }
-    }
-
-    // UserName
-    const username = socket.handshake.auth.username;
-    // console.log(socket.handshake.auth);
-    if (!username) {
-      console.log("invalid username");
-      return next(new Error("invalid username"));
-    }
-    // console.log(socket);
-    socket.data.sessionID = io.engine.generateId(null);
-    socket.data.userID = io.engine.generateId(null);
-    socket.data.username = username;
-    next();
   });
 
   io.on("connection", (socket: Socket) => {
-    console.log(`a user connected ${socket.id}`);
-
-    // Session
-    sessionStore.saveSession(socket.data.sessionID, {
-      userID: socket.data.userID,
-      username: socket.data.username,
-      connected: true,
-    });
-
-    socket.emit("session", {
-      sessionID: socket.data.sessionID,
-      userID: socket.data.userID,
-    });
+    console.log(
+      `${socket.data.userID}(${socket.data.userName}) connected (socketid: ${socket.id})`
+    );
 
     // Join Chatroom
     socket.join(socket.data.userID);
@@ -97,35 +59,31 @@ export default (
     });
 
     // forward the private message to the right recipient
-    socket.on("private message", privateMessageHandler);
-    socket.on("chat message", (msg) => {
-      io.emit("chat message", msg);
+    socket.on("private message", (socket, { content, to }) => {
+      socket.to(to).to(socket.data.userID).emit("private message", {
+        content,
+        from: socket.data.userID,
+        to,
+      });
     });
 
     // Disconnection
-    socket.on("disconnect", disconnectHandler);
-  });
-};
+    socket.on("disconnect", async () => {
+      console.log("user disconnected");
+      const matchingSockets = await io.in(socket.data.userID).fetchSockets();
+      const isDisconnected = matchingSockets.length === 0;
 
-const privateMessageHandler = (socket, { content, to }) => {
-  socket.to(to).to(socket.data.userID).emit("private message", {
-    content,
-    from: socket.data.userID,
-    to,
+      if (isDisconnected) {
+        // notify other users
+        socket.broadcast.emit("user disconnected", socket.data.userID);
+        // update the connection status of the session
+        sessionStore.saveSession(socket.data.userID, {
+          userID: socket.data.userID,
+          username: socket.data.username,
+          connected: false,
+        });
+        console.log(sessionStore.sessions);
+      }
+    });
   });
-};
-
-const disconnectHandler = async () => {
-  console.log("user disconnected");
-  // const matchingSockets = await io.in(socket.userID).allSockets();
-  // const isDisconnected = matchingSockets.size === 0;
-  // if (isDisconnected) {
-  //   socket.broadcast.emit("user disconnected", socket.userID);
-  //   // update the connection status of the session
-  //   sessionStore.saveSession(socket.sessionID, {
-  //     userID: socket.userID,
-  //     username: socket.username,
-  //     connected: false,
-  //   });
-  // }
 };

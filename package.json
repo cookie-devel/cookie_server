@@ -5,6 +5,7 @@
   "scripts": {
     "nodemon": "nodemon dist",
     "watch": "tsc -w",
+    "dev": "tsc -w & nodemon dist",
     "build": "tsc -p ."
   },
   "dependencies": {
