@@ -13,10 +13,10 @@ router.get("/", verifyToken, async (req, res) => {
       success: true,
       result: friendList,
     });
-  } catch (e) {
+  } catch (e: any) {
     console.error(e);
     return res.status(500).send({
-      code: 500,
+      name: e.name,
       message: e,
     });
   }

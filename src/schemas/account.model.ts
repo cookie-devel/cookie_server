@@ -100,6 +100,7 @@ accountSchema.statics.findUser = function ({ userid, phone }) {
       obj[key as keyof typeof obj] === undefined &&
       delete obj[key as keyof typeof obj]
   );
+  // console.log(obj);
 
   return this.findOne(obj);
 };
@@ -174,7 +175,7 @@ interface IAccountDocument {
   getFriends: typeof accountSchema.methods.getFriends;
   generateJWT: typeof accountSchema.methods.generateJWT;
   verifyPassword: typeof accountSchema.methods.verifyPassword;
-  getProfile: typeof accountSchema.methods.getProfile
+  getProfile: typeof accountSchema.methods.getProfile;
 }
 
 // statics

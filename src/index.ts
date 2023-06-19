@@ -10,19 +10,13 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import bcrypto from "bcryptjs";
 import socketioHandler from "./modules/socket.io/handler";
-import {
-  existsRouter,
-  profileRouter,
-  signinRouter,
-  signupRouter,
-} from "./routes/account/index";
+import accountRouter from "./routes/account/index";
+import authRouter from "./routes/auth/index";
 import type { NextFunction, Request, Response } from "express";
 
 import friendsRouter from "./routes/friends/index";
 
 dotenv.config();
-
-// const __dirname = path.resolve();
 
 const app = express();
 const server = http.createServer(app);
@@ -67,11 +61,9 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.log("Could not connect to MongoDB", err));
 
-app.use("/account/exists", existsRouter);
-app.use("/account/signup", signupRouter);
-app.use("/account/signin", signinRouter);
-app.use("/account/profile", profileRouter);
-
+// Routes
+app.use("/account", accountRouter);
+app.use("/auth", authRouter);
 app.use("/friends", friendsRouter);
 
 // catch 404 and forward to error handler
