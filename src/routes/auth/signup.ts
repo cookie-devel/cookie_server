@@ -20,7 +20,7 @@ const schema = Joi.object({
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const userid = req.body.userid;
-    const path = `uploads/${userid}/`;
+    const path = `/uploads/${userid}/`;
     fs.mkdirSync(path, { recursive: true });
     cb(null, path);
   },
@@ -51,12 +51,19 @@ router.post("/", upload.single("profile_image"), async (req, res, next) => {
     });
 
     return res.status(201);
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      success: false,
-      e,
-    });
+  } catch (e: any) {
+    if (e.name === "MongoServerError" ) {
+      console.log({ name: e.name, message: e.message });
+      return res.status(500).json({
+        name: e.code,
+        message: e.message,
+      });
+    } else {
+      return res.status(500).json({
+        name: "Error",
+        message: "Internal Server Error",
+      });
+    }
   }
 });
 
