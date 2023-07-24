@@ -50,7 +50,18 @@ router.post("/", upload.single("profile_image"), async (req, res, next) => {
       },
     });
 
-    return res.status(201);
+    return res.status(201).json(
+      {
+        message: "Account Created",
+        account: {
+          userid: result.userid,
+          username: result.username,
+          birthday: result.birthday,
+          phone: result.phone,
+          profile: result.profile,
+        },
+      }
+    );
   } catch (e: any) {
     if (e.name === "MongoServerError" ) {
       console.log({ name: e.name, message: e.message });
