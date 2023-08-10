@@ -1,4 +1,5 @@
 import express from "express";
+import { Request, Response, NextFunction } from "express";
 import Joi from "joi";
 import multer from "multer";
 import Account from "../../schemas/account.model";
@@ -17,6 +18,15 @@ const schema = Joi.object({
   phone: Joi.string().min(11).max(11).required(),
 });
 
+const validate = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await schema.validateAsync(req.body);
+  } catch (e: any) {
+    return res.status(400).json({ message: e.message });
+  }
+  next();
+};
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const userid = req.body.userid;
@@ -34,24 +44,21 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post("/", upload.single("profile_image"), async (req, res, next) => {
-  try {
-    await schema.validateAsync(req.body);
-  } catch (e: any) {
-    return res.status(400).json({ message: e.message });
-  }
+router.post(
+  "/",
+  validate,
+  upload.single("profile_image"),
+  async (req, res, next) => {
+    try {
+      const result = await Account.createAccount({
+        ...req.body,
+        profile: {
+          image: req.file ? req.file.path : null,
+          message: null,
+        },
+      });
 
-  try {
-    const result = await Account.createAccount({
-      ...req.body,
-      profile: {
-        image: req.file ? req.file.path : null,
-        message: null,
-      },
-    });
-
-    return res.status(201).json(
-      {
+      return res.status(201).json({
         message: "Account Created",
         account: {
           userid: result.userid,
@@ -60,22 +67,22 @@ router.post("/", upload.single("profile_image"), async (req, res, next) => {
           phone: result.phone,
           profile: result.profile,
         },
+      });
+    } catch (e: any) {
+      if (e.name === "MongoServerError") {
+        console.log({ name: e.name, message: e.message });
+        return res.status(500).json({
+          name: e.code,
+          message: e.message,
+        });
+      } else {
+        return res.status(500).json({
+          name: "Error",
+          message: "Internal Server Error",
+        });
       }
-    );
-  } catch (e: any) {
-    if (e.name === "MongoServerError" ) {
-      console.log({ name: e.name, message: e.message });
-      return res.status(500).json({
-        name: e.code,
-        message: e.message,
-      });
-    } else {
-      return res.status(500).json({
-        name: "Error",
-        message: "Internal Server Error",
-      });
     }
   }
-});
+);
 
 export default router;

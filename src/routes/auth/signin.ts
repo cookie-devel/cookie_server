@@ -1,4 +1,5 @@
 import express from "express";
+import { Request, Response, NextFunction } from "express";
 import Joi from "joi";
 import Account from "../../schemas/account.model";
 
@@ -9,14 +10,17 @@ const schema = Joi.object({
   password: Joi.string().min(10).max(30).required(),
 });
 
-router.post("/", async function (req, res, next) {
-  const { userid, password } = req.body;
-
+const validate = async (req: Request, res: Response, next: NextFunction) => {
   try {
     await schema.validateAsync(req.body);
   } catch (e: any) {
     return res.status(400).json({ message: e.message });
   }
+  next();
+};
+
+router.post("/", validate, async function (req, res, next) {
+  const { userid, password } = req.body;
 
   try {
     const account = await Account.findUser({ userid }).exec();
