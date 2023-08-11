@@ -10,7 +10,7 @@ const schema = Joi.object({
   fields: Joi.string().optional(),
 });
 
-router.get("/", verifyToken, async function (req, res, next) {
+router.get("/", verifyToken, async function (req, res) {
   const userid = req.decoded["userid"];
 
   try {
@@ -32,9 +32,7 @@ router.get("/", verifyToken, async function (req, res, next) {
     if (req.query.fields) {
       const subset = _.pick(json, (req.query.fields as string).split(","));
       return res.status(200).json(subset);
-    }
-
-    return res.status(200).json(json);
+    } else return res.status(200).json(json);
   } catch (e) {
     console.error(e);
     return res.status(500).send({ message: "Internal Server Error" });

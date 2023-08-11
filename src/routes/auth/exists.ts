@@ -1,4 +1,5 @@
 import express from "express";
+import { Request, Response, NextFunction } from "express";
 import Account from "../../schemas/account.model";
 import Joi from "joi";
 const router = express.Router();
@@ -10,7 +11,7 @@ const schema = Joi.object({
   .or("userid", "phone")
   .required();
 
-const validate = async (req: express.Request, res: express.Response, next) => {
+const validate = async (req: Request, res: Response, next: NextFunction) => {
   try {
     await schema.validateAsync(req.query);
   } catch (e: any) {
@@ -22,13 +23,13 @@ const validate = async (req: express.Request, res: express.Response, next) => {
   next();
 };
 
-router.get("/", validate, async (req, res, next) => {
+router.get("/", validate, async (req, res) => {
   const { userid, phone } = req.query;
 
   try {
     const found_account = await Account.findUser({ userid, phone }).lean();
 
-    return await res.status(200).send({
+    return res.status(200).send({
       result: !(found_account === null),
       message: found_account === null ? "Not Found" : "Already Exists",
     });
