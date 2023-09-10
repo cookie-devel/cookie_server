@@ -1,5 +1,5 @@
-interface User {
+export interface User {
   userID: string;
   username: string;
-  rooms: Room[];
+  rooms: Room[] | undefined;
 }

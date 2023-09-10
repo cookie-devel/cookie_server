@@ -4,36 +4,39 @@ interface Message {
   time: Date;
 }
 
+interface Room {
+    id: string;
+    users: User[];
+    messages: Message[];
+}
+
 interface User {
   userID: string;
   username: string;
   rooms: Room[];
 }
 
-class Room {
-  roomID: string;
-  users: User[] = [];
-  messages: Message[] = [];
+class Chat {
+    user: User | null = null;
+    
+    constructor(user: User) {
+        this.user = user;
+    }
+    
+    addUser(room: Room, user: User) {
+        room.users.push(user);
+    }
+    
+    addRoom(room: Room) {
+        if (this.user === null) throw new Error("User is null");
+        this.user.rooms.push(room);
+    }
 
-  constructor(roomID: string) {
-    this.roomID = roomID;
-    this.users = [];
-    this.messages = [];
-  }
+    addMessage(room: Room, message: Message) {
+        room.messages.push(message);
+    }
 
-  setUsers(users: User[]) {
-    this.users = users;
-  }
-
-  addUser(user: User) {
-    this.users.push(user);
-  }
-
-  addMessage(message: Message) {
-    this.messages.push(message);
-  }
-
-  getMessages() {
-    return this.messages;
-  }
+    getMessages(room: Room) {
+        return room.messages;
+    }
 }

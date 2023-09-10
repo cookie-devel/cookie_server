@@ -1,36 +1,15 @@
-import { verifySocketToken } from "../../middlewares/jwt/verifyToken";
-import jwt from "jsonwebtoken";
 import { InMemorySessionStore } from "./sessionStore";
-import type { Server, Socket } from "socket.io";
+import type { Room } from "../../interfaces/Chat";
+import type { Server, Socket, Namespace } from "socket.io";
 import type { DefaultEventsMap } from "socket.io/dist/typed-events";
-import { ExtendedError } from "socket.io/dist/namespace";
 const sessionStore = new InMemorySessionStore();
 
 export default (
-  io: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
+io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
 ) => {
-  // Handshake JWT Authentication
-  io.use((socket, next) => {
-    // Authentication
-    if (socket.handshake.auth && socket.handshake.auth.token) {
-      jwt.verify(
-        socket.handshake.auth.token,
-        process.env.JWT_SECRET_KEY!,
-        (err, decoded) => {
-          if (err || !decoded) return next(new Error("Authentication error"));
-          if (!decoded["userid"] || !decoded["username"])
-            return next(new Error("Invalid Token"));
-          socket.data.userID = decoded["userid"];
-          socket.data.userName = decoded["username"];
-          next();
-        }
-      );
-    } else next(new Error("Authentication error"));
-  });
-
   io.on("connection", (socket: Socket) => {
     console.log(
-      `${socket.data.userID}(${socket.data.userName}) connected (socketid: ${socket.id})`
+      `${socket.data.userID}(${socket.data.userName}) connected to chatHandler Namespace (socketid: ${socket.id})`
     );
 
     // Join Chatroom
@@ -40,31 +19,51 @@ export default (
     const users: Array<{
       userID: string;
       username: string;
+      rooms: string[];
       connected: string;
     }> = [];
+
     sessionStore.findAllSessions().forEach((session) => {
       users.push({
         userID: session.userID,
         username: session.username,
+        rooms: session.rooms,
         connected: session.connected,
       });
     });
-    socket.emit("users", users);
+    // socket.emit("users", users);
 
-    // notify existing users
-    socket.broadcast.emit("user connected", {
-      userID: socket.data.userID,
-      username: socket.data.username,
-      connected: true,
+    socket.on("new_room", (roomInfo: Room) => {
+      const { id, users } = roomInfo;
+      console.log(`user ${socket.data.userID} emitted new_room: ${id}`);
+      socket.join(id);
+
+      for (const user of users) {
+        // TODO: find socketID from userID
+        const socketID = 'testid1'
+        socket.to(socketID).emit("new_room", roomInfo);
+      }
+      socket.broadcast.emit("new_room", roomInfo);
     });
 
-    // forward the private message to the right recipient
-    socket.on("private message", (socket, { content, to }) => {
-      socket.to(to).to(socket.data.userID).emit("private message", {
+    socket.on("join_room", ({ roomID, users }) => {
+      socket.to(roomID).emit("join_room", { roomID, users });
+    });
+
+    socket.on("leave_room", ({ roomID }) => {
+      const user = socket.data.userID;
+      socket.leave(roomID);
+      io.in(roomID).emit("leave_room", { roomID, user });
+    });
+
+    socket.on("chat", ({ roomID, content }) => {
+      const message = {
         content,
+        time: new Date(),
         from: socket.data.userID,
-        to,
-      });
+      };
+
+      io.in(roomID).emit("chat", message);
     });
 
     // Disconnection
@@ -80,6 +79,7 @@ export default (
         sessionStore.saveSession(socket.data.userID, {
           userID: socket.data.userID,
           username: socket.data.username,
+          rooms: socket.data.rooms,
           connected: false,
         });
         console.log(sessionStore.sessions);

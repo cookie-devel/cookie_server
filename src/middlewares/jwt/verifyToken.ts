@@ -37,12 +37,15 @@ const verifySocketToken = (
   socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
   next: (err?: ExtendedError | undefined) => void
 ) => {
-  const token = socket.handshake.auth.token;
+  // for postman testing, access_token is used instead of auth.token
+  const token = socket.handshake.auth.token || socket.handshake.headers.access_token;
 
   try {
     if (!token) throw new TokenNotProvidedError();
     socket.data.decoded = jwt.verify(token, process.env.JWT_SECRET_KEY!);
-    // socket.query.user = jwt.verify(token, process.env.JWT_SECRET_KEY!);
+    socket.data.userID = socket.data.decoded['userid'];
+    socket.data.userName = socket.data.decoded['username'];
+    console.log(`User ${socket.data.userID}(${socket.data.userName}) connected (socketid: ${socket.id})`)
     return next();
   } catch (e: any) {
     if (e.name === "TokenExpireError") {

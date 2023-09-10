@@ -3,32 +3,51 @@ import path from "path";
 import cookieParser from "cookie-parser";
 import logger from "morgan";
 import http from "http";
-import express from "express";
-import { Server } from "socket.io";
+import { Server as SocketIOServer } from "socket.io";
 import { instrument } from "@socket.io/admin-ui";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import bcrypto from "bcryptjs";
-import socketioHandler from "./modules/socket.io/handler";
-import accountRouter from "./routes/account/index";
-import authRouter from "./routes/auth/index";
+import { createAdapter } from "@socket.io/mongo-adapter";
+import { MongoClient } from "mongodb";
+import jwt from "jsonwebtoken";
+import express from "express";
 import type { NextFunction, Request, Response } from "express";
 
+import chatHandler from "./modules/socket.io/handler";
+// Routers
+import accountRouter from "./routes/account/index";
+import authRouter from "./routes/auth/index";
 import friendsRouter from "./routes/friends/index";
+import { verifySocketToken } from "./middlewares/jwt/verifyToken";
 
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
 
-const io = new Server(server, {
+const io = new SocketIOServer(server, {
   cors: {
     origin: ["https://admin.socket.io", "http://localhost:8080"],
     credentials: true,
   },
 });
-socketioHandler(io);
 
+const of = io.of;
+io.of = (...args) => {
+  const nsp = of.call(io, ...args);
+  nsp.use(verifySocketToken);
+  return nsp;
+};
+
+// Chat NameSpace Handler
+const chatNSP = io.of("/chat");
+chatHandler(chatNSP);
+
+// Location NameSpace Handler
+const locationNSP = io.of("/location");
+
+// Admin UI for Socket.IO
 instrument(io, {
   auth: {
     type: "basic",
@@ -52,13 +71,23 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 // MongoDB
+const mongoClient = new MongoClient(process.env.MONGODB_URI!);
+mongoClient
+  .connect()
+  .then(() => {
+    const mongoCollection = mongoClient.db("dev-cookie").collection("sessions");
+
+    io.adapter(createAdapter(mongoCollection));
+    io.listen(3001);
+
+    console.log("IO MongoDB connected: 3001");
+  })
+  .catch((err) => console.log(err));
+
 mongoose.Promise = global.Promise;
 mongoose
-  .connect(process.env.MONGODB_URI!, {
-    // useNewUrlParser: true,
-    // useUnifiedTopology: true,
-  })
-  .then(() => console.log("Connected to MongoDB"))
+  .connect(process.env.MONGODB_URI!)
+  .then(() => console.log(`Connected to MongoDB ${process.env.MONGODB_URI}`))
   .catch((err) => console.log("Could not connect to MongoDB", err));
 
 // Routes
