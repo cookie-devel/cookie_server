@@ -1,6 +1,6 @@
 /* abstract */
 class SessionStore {
-  sessions: Map<string, any>;
+  sessions: Map<string, any> = new Map();
 
   findSession(id) {}
   saveSession(id, session) {}
