@@ -2,6 +2,13 @@ import mongoose from "mongoose";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import type { Model, QueryWithHelpers } from "mongoose";
+import { Room } from "./chat.model";
+
+export interface User {
+  id: string;
+  name: string;
+  rooms: Room[] | undefined;
+}
 
 function hash(password: string) {
   return crypto
@@ -55,6 +62,7 @@ const accountSchema = new Schema(
     },
   },
   {
+    collection: "accounts",
     timestamps: true,
   }
 );
@@ -100,7 +108,6 @@ accountSchema.statics.findUser = function ({ userid, phone }) {
       obj[key as keyof typeof obj] === undefined &&
       delete obj[key as keyof typeof obj]
   );
-  // console.log(obj);
 
   return this.findOne(obj);
 };
