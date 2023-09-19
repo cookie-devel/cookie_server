@@ -12,7 +12,7 @@ export interface Message {
 }
 
 export interface Room {
-  id: string | null;
+  _id: string;
   name: string;
   users: User[];
   messages: Message[];
@@ -43,10 +43,10 @@ const chatSchema = new mongoose.Schema(
   }
 );
 
-chatSchema.statics.createChatRoom = async function (room: Room) {
+chatSchema.statics.createChatRoom = async function ({ name, users }) {
   const _room = await new this({
-    name: room.name,
-    users: room.users,
+    name: name,
+    users: users,
     messages: [],
   });
 
@@ -66,10 +66,7 @@ chatSchema.statics.findChatRoomByID = async function (roomID: string) {
   return this.findById(roomID).populate("users").populate("messages").exec();
 };
 
-chatSchema.statics.addChatToRoom = async function (
-  roomID: string,
-  message: Message
-) {
+chatSchema.statics.addChat = async function (roomID: string, message: Message) {
   const room = await this.findById(roomID);
   if (room === null) throw new Error("Room not found");
   room.messages.push(message);
@@ -82,15 +79,21 @@ chatSchema.methods.addChat = async function (message: Message) {
 
 // methods
 interface IChatDocument {
-  addChat: typeof chatSchema.methods.addChat;
+  addChat: (message: Message) => Promise<void>;
 }
 
 // statics
 interface IChatModel extends mongoose.Model<IChatDocument> {
-  createChatRoom: typeof chatSchema.statics.createChatRoom;
-  checkChatRoomExists: typeof chatSchema.statics.checkChatRoomExists;
-  findChatRoomByID: typeof chatSchema.statics.findChatRoomByID;
-  addChatToRoom: typeof chatSchema.statics.addChatToRoom;
+  createChatRoom: ({
+    name,
+    users,
+  }: {
+    name: Room["name"];
+    users: Room["users"];
+  }) => Promise<Room>;
+  checkChatRoomExists: (roomID: string) => Promise<boolean>;
+  findChatRoomByID: (roomID: string) => Promise<Room | null>;
+  addChat: (roomID: string, message: Message) => Promise<void>;
 }
 
 const Chat: IChatModel = mongoose.model<IChatDocument, IChatModel>(

@@ -1,23 +1,27 @@
-/* abstract */
-class SessionStore {
-  sessions: Map<string, any> = new Map();
-
-  findSession(id) {}
-  saveSession(id, session) {}
-  findAllSessions() {}
+interface Session {
+  socketID: string;
+  connected: boolean;
 }
 
-class InMemorySessionStore extends SessionStore {
+/* abstract */
+abstract class SessionStore<T extends Session> {
+  sessions: Map<string, T> = new Map();
+
+  abstract findSession(id: string): T | undefined;
+  abstract saveSession(id: string, session: T): void;
+  abstract findAllSessions(): T[];
+}
+
+class InMemorySessionStore<T extends Session> extends SessionStore<T> {
   constructor() {
     super();
-    this.sessions = new Map();
   }
 
-  findSession(id) {
+  findSession(id: string) {
     return this.sessions.get(id);
   }
 
-  saveSession(id, session) {
+  saveSession(id: string, session: T) {
     this.sessions.set(id, session);
   }
 
@@ -26,4 +30,4 @@ class InMemorySessionStore extends SessionStore {
   }
 }
 
-export { InMemorySessionStore };
+export { Session, InMemorySessionStore };
