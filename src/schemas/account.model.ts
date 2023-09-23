@@ -1,14 +1,12 @@
-import mongoose from "mongoose";
+// Reference
+// https://mongoosejs.com/docs/typescript/statics.html
+// https://mongoosejs.com/docs/typescript/statics-and-methods.html
+// There are some bugs (methods won't work) when mongoose infers type when you make static query
+// You should use query field instead of making static method query
+
+import mongoose, { InferSchemaType, Schema } from "mongoose";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import type { Model, QueryWithHelpers } from "mongoose";
-import { Room } from "./chat.model";
-
-export interface User {
-  id: string;
-  name: string;
-  rooms: Room[] | undefined;
-}
 
 function hash(password: string) {
   return crypto
@@ -17,9 +15,20 @@ function hash(password: string) {
     .digest("hex");
 }
 
-const { Schema } = mongoose;
+export const ProfileSchema = new Schema({
+  image: {
+    type: String,
+    required: true,
+    default: "https://i.imgur.com/1Q9ZQ9r.png",
+  },
+  message: {
+    type: String,
+    required: true,
+    default: "",
+  },
+});
 
-const accountSchema = new Schema(
+export const AccountSchema = new Schema(
   {
     _id: {
       type: String,
@@ -28,7 +37,7 @@ const accountSchema = new Schema(
       type: String,
       required: true,
     },
-    username: {
+    name: {
       type: String,
       required: true,
       unique: false,
@@ -43,158 +52,94 @@ const accountSchema = new Schema(
       unique: true,
     },
     profile: {
-      type: Object,
+      type: ProfileSchema,
       required: true,
-      default: {
-        image: "https://i.imgur.com/1Q9ZQ9r.png",
-        message: "Hello, I'm new here!",
-      },
     },
-    friendList: [
+    friendIDs: [
       {
         type: String,
         ref: "Account",
       },
     ],
-    chatList: {
-      type: Array,
-      required: false,
-    },
+    chatRoomIDs: [
+      {
+        type: String,
+        ref: "ChatRoom",
+      },
+    ],
   },
   {
     collection: "accounts",
     timestamps: true,
+    query: {
+      byPhone: function (phone: string) {
+        return this.findOne({ phone });
+      },
+    },
+    statics: {
+      async createAccount({
+        userid: _id,
+        password,
+        username: name,
+        birthday,
+        phone,
+        profile,
+      }) {
+        const account = new this({
+          _id,
+          password: hash(password),
+          name,
+          birthday,
+          phone,
+          profile,
+        });
+
+        try {
+          return account.save();
+        } catch (e) {
+          throw e;
+        }
+      },
+    },
+    methods: {
+      generateJWT() {
+        return jwt.sign(
+          {
+            userid: this._id,
+            username: this.name,
+          },
+          process.env.JWT_SECRET_KEY!,
+          {
+            algorithm: "HS256",
+            expiresIn: "7d",
+            issuer: process.env.BASE_URI,
+            subject: "userInfo",
+          }
+        );
+      },
+      verifyPassword(password: string) {
+        const hashed = hash(password);
+        return this.password === hashed;
+      },
+      async getFriends() {
+        return (await this.populate("friendIDs", "_id name profile"))[
+          "friendIDs"
+        ];
+      },
+    },
   }
 );
 
+// Use transform to rename _id to userid (if needed)
 const transform = function (doc: any, ret: any, options: any) {
-  // rename _id to userid
-  ret.userid = doc._id;
+  // ret.userid = doc._id;
+  ret.id = doc._id;
   delete ret._id;
 };
 
-accountSchema.set("toObject", { transform });
-accountSchema.set("toJSON", { transform });
+AccountSchema.set("toObject", { transform });
+AccountSchema.set("toJSON", { transform });
 
-accountSchema.statics.createAccount = async function ({
-  userid,
-  password,
-  username,
-  birthday,
-  phone,
-  profile,
-}) {
-  const account = new this({
-    _id: userid,
-    password: hash(password),
-    username,
-    birthday,
-    phone,
-    profile,
-  });
-
-  try {
-    return account.save();
-  } catch (e) {
-    throw e;
-  }
-};
-
-accountSchema.statics.findUser = function ({ userid, phone }) {
-  const obj = { _id: userid, phone };
-
-  Object.keys(obj).forEach(
-    (key) =>
-      obj[key as keyof typeof obj] === undefined &&
-      delete obj[key as keyof typeof obj]
-  );
-
-  return this.findOne(obj);
-};
-
-accountSchema.methods.generateJWT = function () {
-  return jwt.sign(
-    {
-      userid: this._id,
-      username: this.username,
-    },
-    process.env.JWT_SECRET_KEY!,
-    {
-      algorithm: "HS256",
-      expiresIn: "7d",
-      issuer: process.env.BASE_URI,
-      subject: "userInfo",
-    }
-  );
-};
-
-accountSchema.methods.verifyPassword = function (password: string) {
-  const hashed = hash(password);
-  return this.password === hashed;
-};
-
-accountSchema.methods.getProfile = function () {
-  return this.profile;
-};
-
-accountSchema.statics.getFriends = async function (userid) {
-  const result = await Account.aggregate([
-    {
-      $match: {
-        _id: userid,
-      },
-    },
-    {
-      $limit: 1,
-    },
-    {
-      $lookup: {
-        from: "accounts",
-        localField: "friendList",
-        foreignField: "_id",
-        as: "friendList",
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        userid: "$_id",
-        friendList: {
-          userid: "$_id",
-          username: 1,
-          profile: 1,
-        },
-      },
-    },
-  ]);
-
-  return result[0]["friendList"];
-};
-
-accountSchema.methods.getFriends = async function () {
-  return (await this.populate("friendList", "_id username profile"))[
-    "friendList"
-  ];
-};
-
-// methods
-interface IAccountDocument {
-  getFriends: typeof accountSchema.methods.getFriends;
-  generateJWT: typeof accountSchema.methods.generateJWT;
-  verifyPassword: typeof accountSchema.methods.verifyPassword;
-  getProfile: typeof accountSchema.methods.getProfile;
-}
-
-// statics
-interface IAccountModel extends Model<IAccountDocument> {
-  getFriends: typeof accountSchema.statics.getFriends;
-  createAccount: typeof accountSchema.statics.createAccount;
-  findUser: typeof accountSchema.statics.findUser;
-}
-
-const Account: IAccountModel = mongoose.model<IAccountDocument, IAccountModel>(
-  "Account",
-  accountSchema
-);
-
-export default Account;
+export type IAccount = InferSchemaType<typeof AccountSchema>;
+export type IProfile = InferSchemaType<typeof ProfileSchema>;
+export default mongoose.model("Account", AccountSchema);

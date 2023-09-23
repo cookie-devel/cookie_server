@@ -1,12 +1,9 @@
 import { Session, InMemorySessionStore } from "./sessionStore";
 import type { Server, Socket, Namespace } from "socket.io";
 import type { DefaultEventsMap } from "socket.io/dist/typed-events";
-import ChatModel, {
-  Message,
-  MessageContent,
-  Room,
-} from "../../schemas/chat.model";
-import { User } from "../../schemas/account.model";
+import ChatModel from "../../schemas/chat.model"; // Room, // MessageContent, // Message,
+import { IAccount } from "../../schemas/account.model";
+import { IChatRoom, IMessage } from "../../schemas/chat.model";
 
 const ChatEvent = {
   NewRoom: "new_room",
@@ -28,29 +25,29 @@ interface SocketRequest {}
 interface SocketResponse {}
 
 interface NewRoomRequest extends SocketRequest {
-  name: Room["name"];
-  users: Room["users"];
+  name: IChatRoom["name"];
+  users: IChatRoom["userIDs"];
 }
 
 interface NewRoomResponse extends SocketResponse {
-  id: Room["_id"];
+  id: IChatRoom["_id"];
 }
 
 interface JoinRoomRequest extends SocketRequest {
-  id: Room["_id"];
+  id: IChatRoom["_id"];
 }
 
 interface JoinRoomResponse extends SocketResponse {
-  userID: User["id"];
+  userID: IAccount["_id"];
   socketID: string;
 }
 
 interface ChatRequest extends SocketRequest {
-  roomID: Room["_id"];
-  content: MessageContent;
+  roomID: IChatRoom["_id"];
+  content: IMessage["payload"];
 }
 
-type ChatResponse = Message;
+type ChatResponse = IMessage;
 
 const addPendingEvent = (userid: string, event: string, data: any) => {
   let session = sessionStore.findSession(userid) || {
@@ -111,7 +108,8 @@ export default (
       const room = await ChatModel.createChatRoom({
         name: req.name,
         users: req.users,
-      });
+      })
+        
       socket.join(room._id);
 
       console.log(
@@ -119,15 +117,15 @@ export default (
       );
 
       // Request user to join the room
-      for (const user of room.users) {
-        const userSession = sessionStore.findSession(user.id);
+      for (const user of room.userIDs) {
+        const userSession = sessionStore.findSession(user);
 
         if (
           userSession === undefined || // Case: User to invite is never connected before
           userSession.connected === false // Case: User to invite is not connected currently but was connected before
         ) {
           // TODO: Register the room to the user's account
-          addPendingEvent(user.id, ChatEvent.NewRoom, room._id);
+          addPendingEvent(user, ChatEvent.NewRoom, room._id);
         } else {
           const res: NewRoomResponse = {
             id: room._id,
@@ -140,7 +138,8 @@ export default (
     // Event: Join Room
     // Called only when client emits "join_room" event
     socket.on(ChatEvent.JoinRoom, async ({ id }: JoinRoomRequest) => {
-      const room = await ChatModel.findChatRoomByID(id);
+      const room = await ChatModel.findById(id).exec();
+      // room.populate("users").populate("messages").exec();
       if (room === null) {
         // TODO: Handle Error: Room not found
       } else {
@@ -187,15 +186,16 @@ export default (
       nsp.in(roomID).emit(ChatEvent.LeaveRoom, { roomID, user });
     });
 
-    // Event: Chat 
-    socket.on(ChatEvent.Chat, ({ roomID, content }: ChatRequest) => {
+    // Event: Chat
+    socket.on(ChatEvent.Chat, async ({ roomID, content }: ChatRequest) => {
       const message: ChatResponse = {
         payload: content,
         time: new Date(),
         sender: socket.data.userID,
       };
+      const chatRoom = await ChatModel.findById(roomID).exec();
 
-      ChatModel.addChat(roomID, message);
+      chatRoom.addChat(message);
       nsp.in(roomID).emit(ChatEvent.Chat, message);
 
       console.log(

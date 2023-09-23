@@ -23,7 +23,7 @@ router.post("/", validate, async function (req, res, next) {
   const { userid, password } = req.body;
 
   try {
-    const account = await Account.findUser({ userid }).exec();
+    const account = await Account.findById(userid);
     if (!account) return res.status(401).json({ message: "User not found" });
 
     const verified = account.verifyPassword(password);
@@ -31,11 +31,11 @@ router.post("/", validate, async function (req, res, next) {
       return res.status(200).json({
         success: verified,
         account: {
-          userid: account._id,
-          username: account.username,
+          id: account._id,
+          name: account.name,
           phone: account.phone,
-          friendList: await account.getFriends(),
           profile: account.profile,
+          friendList: await account.getFriends(),
         },
         access_token: account.generateJWT(),
       });

@@ -20,13 +20,13 @@ router.get("/", verifyToken, async function (req, res) {
   }
 
   try {
-    const account = await Account.findUser({ userid }).exec();
+    const account = await Account.findById(userid).exec();
     const json = {
-      userid: account._id,
-      username: account.username,
+      id: account._id,
+      name: account.name,
       phone: account.phone,
-      friendList: await account.getFriends(),
       profile: account.profile,
+      friendList: await account.getFriends(),
     };
 
     if (req.query.fields) {

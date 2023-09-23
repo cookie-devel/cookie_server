@@ -17,7 +17,7 @@ const validate = async (req: Request, res: Response, next: NextFunction) => {
   } catch (e: any) {
     return res.status(400).json({
       name: e.name,
-      message: e.message
+      message: e.message,
     });
   }
   next();
@@ -27,7 +27,12 @@ router.get("/", validate, async (req, res) => {
   const { userid, phone } = req.query;
 
   try {
-    const found_account = await Account.findUser({ userid, phone }).lean();
+    let found_account;
+
+    if (userid)
+      found_account = await Account.findById(userid.toString()).lean();
+    else if (phone)
+      found_account = await Account.findOne().byPhone(phone.toString()).lean();
 
     return res.status(200).send({
       result: !(found_account === null),

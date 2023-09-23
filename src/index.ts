@@ -18,7 +18,6 @@ import chatHandler from "./modules/socket.io/handler";
 // Routers
 import accountRouter from "./routes/account/index";
 import authRouter from "./routes/auth/index";
-import friendsRouter from "./routes/friends/index";
 import { verifySocketToken } from "./middlewares/jwt/verifyToken";
 
 dotenv.config();
@@ -67,7 +66,7 @@ app.set("view engine", "jade");
 
 app.use(logger("dev"));
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // MongoDB
@@ -77,7 +76,7 @@ mongoClient
   .then(() => {
     const mongoCollection = mongoClient.db("dev-cookie").collection("sessions");
 
-    io.adapter(createAdapter(mongoCollection));
+    // io.adapter(createAdapter(mongoCollection));
     io.listen(3001);
 
     console.log("IO MongoDB connected: 3001");
@@ -93,7 +92,6 @@ mongoose
 // Routes
 app.use("/account", accountRouter);
 app.use("/auth", authRouter);
-app.use("/friends", friendsRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

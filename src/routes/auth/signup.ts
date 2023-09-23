@@ -16,6 +16,7 @@ const schema = Joi.object({
   username: Joi.string().min(1).max(10).required(),
   birthday: Joi.date().required(),
   phone: Joi.string().min(11).max(11).required(),
+  profile_message: Joi.string().optional(),
 });
 
 const validate = async (req: Request, res: Response, next: NextFunction) => {
@@ -30,8 +31,8 @@ const validate = async (req: Request, res: Response, next: NextFunction) => {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const userid = req.body.userid;
-    const path = `/uploads/${userid}/`;
-    fs.mkdirSync(path, { recursive: true });
+    const path = `./uploads/${userid}/`;
+    fs.mkdir(path, { recursive: true }, (err) => {});
     cb(null, path);
   },
   filename: function (req, file, cb) {
@@ -46,23 +47,23 @@ const upload = multer({ storage });
 
 router.post(
   "/",
-  validate,
   upload.single("profile_image"),
+  validate,
   async (req, res, next) => {
     try {
       const result = await Account.createAccount({
         ...req.body,
         profile: {
           image: req.file ? req.file.path : null,
-          message: null,
+          message: req.body.profile_message,
         },
       });
 
       return res.status(201).json({
         message: "Account Created",
         account: {
-          userid: result.userid,
-          username: result.username,
+          id: result._id,
+          name: result.name,
           birthday: result.birthday,
           phone: result.phone,
           profile: result.profile,
@@ -78,7 +79,7 @@ router.post(
       } else {
         return res.status(500).json({
           name: "Error",
-          message: "Internal Server Error",
+          message: e.message,
         });
       }
     }
