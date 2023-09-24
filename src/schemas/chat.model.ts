@@ -1,5 +1,5 @@
+import { ObjectId } from "mongodb";
 import mongoose, { InferSchemaType, Schema } from "mongoose";
-import { AccountSchema } from "./account.model";
 
 const MessageSchema = new Schema({
   _id: {
@@ -23,7 +23,9 @@ const MessageSchema = new Schema({
 const ChatRoomSchema = new Schema(
   {
     _id: {
-      type: String,
+      type: ObjectId,
+      required: true,
+      auto: true,
     },
     name: {
       type: String,
@@ -40,7 +42,6 @@ const ChatRoomSchema = new Schema(
       {
         type: MessageSchema,
         required: true,
-        // ref: "Message",
       },
     ],
   },
@@ -53,11 +54,10 @@ const ChatRoomSchema = new Schema(
       },
     },
     statics: {
-      async createChatRoom({ name, users }) {
+      async createChatRoom({ name, userIDs }) {
         const _room = new this({
           name: name,
-          users: users,
-          messages: [],
+          userIDs: userIDs,
         });
 
         try {
@@ -75,7 +75,7 @@ const ChatRoomSchema = new Schema(
       },
       getPopulatedById(_id) {
         return this.findById(_id).populate("users").populate("messages").exec();
-      }
+      },
     },
     methods: {
       async addChat(message) {

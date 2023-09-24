@@ -6,7 +6,7 @@ import { IAccount } from "../../schemas/account.model";
 import { IChatRoom, IMessage } from "../../schemas/chat.model";
 
 const ChatEvent = {
-  NewRoom: "new_room",
+  CreateRoom: "create_room",
   JoinRoom: "join_room",
   InviteRoom: "invite_room",
   LeaveRoom: "leave_room",
@@ -24,12 +24,12 @@ const sessionStore = new InMemorySessionStore<ChatSession>();
 interface SocketRequest {}
 interface SocketResponse {}
 
-interface NewRoomRequest extends SocketRequest {
+interface CreateRoomRequest extends SocketRequest {
   name: IChatRoom["name"];
-  users: IChatRoom["userIDs"];
+  userIDs: IChatRoom["userIDs"];
 }
 
-interface NewRoomResponse extends SocketResponse {
+interface CreateRoomResponse extends SocketResponse {
   id: IChatRoom["_id"];
 }
 
@@ -78,6 +78,7 @@ export default (
     );
 
     socket.join(socket.data.userID);
+    console.log(`Joined to ${socket.data.userID}`);
 
     // SESSION
     // find existing session
@@ -100,37 +101,41 @@ export default (
 
     // update session
     session = sessionStore.findSession(socket.data.userID);
-
     // Event Handlers
 
     // Create New Room
-    socket.on(ChatEvent.NewRoom, async (req: NewRoomRequest) => {
+    socket.on(ChatEvent.CreateRoom, async (req: CreateRoomRequest) => {
       const room = await ChatModel.createChatRoom({
         name: req.name,
-        users: req.users,
-      })
-        
-      socket.join(room._id);
+        userIDs: req.userIDs,
+      });
+
+      socket.join(room._id.toString());
 
       console.log(
         `New room created by ${socket.data.userID}: ${room._id} (${room.name})`
       );
 
       // Request user to join the room
-      for (const user of room.userIDs) {
-        const userSession = sessionStore.findSession(user);
-
+      for (const userID of room.userIDs) {
+        const userSession = sessionStore.findSession(userID);
+        console.log(
+          `User ${userID} is ${
+            userSession?.connected ? "connected" : "disconnected"
+          }`
+        );
+        console.log(`userSession: ${userSession}`);
         if (
           userSession === undefined || // Case: User to invite is never connected before
           userSession.connected === false // Case: User to invite is not connected currently but was connected before
         ) {
           // TODO: Register the room to the user's account
-          addPendingEvent(user, ChatEvent.NewRoom, room._id);
+          addPendingEvent(userID, ChatEvent.CreateRoom, room._id);
         } else {
-          const res: NewRoomResponse = {
+          const res: CreateRoomResponse = {
             id: room._id,
           };
-          socket.to(userSession.socketID).emit(ChatEvent.NewRoom, res);
+          socket.to(userID).emit(ChatEvent.CreateRoom, res);
         }
       }
     });
@@ -145,21 +150,21 @@ export default (
       } else {
         // TODO: check if the user belongs to the room
         // room.users
-        socket.join(id);
+        socket.join(id.toString());
 
         // const session = sessionStore.findSession(socket.data.userID);
         // if (session === undefined) throw new Error("Session not found");
 
         sessionStore.saveSession(socket.data.userID, {
           ...session,
-          roomIDs: new Set([id, ...session.roomIDs]),
+          roomIDs: new Set([id.toString(), ...session.roomIDs]),
         });
         // Announce that new user is joined to the room
         const res: JoinRoomResponse = {
           userID: socket.data.userID,
           socketID: socket.id,
         };
-        nsp.in(id).emit(ChatEvent.JoinRoom, res);
+        nsp.in(id.toString()).emit(ChatEvent.JoinRoom, res);
       }
     });
 
@@ -183,7 +188,7 @@ export default (
       });
 
       socket.leave(roomID);
-      nsp.in(roomID).emit(ChatEvent.LeaveRoom, { roomID, user });
+      nsp.in(roomID.toString()).emit(ChatEvent.LeaveRoom, { roomID, user });
     });
 
     // Event: Chat
@@ -196,7 +201,7 @@ export default (
       const chatRoom = await ChatModel.findById(roomID).exec();
 
       chatRoom.addChat(message);
-      nsp.in(roomID).emit(ChatEvent.Chat, message);
+      nsp.in(roomID.toString()).emit(ChatEvent.Chat, message);
 
       console.log(
         `New message from ${socket.data.userID} to room ${roomID}: ${content.content} (${message.time})`
