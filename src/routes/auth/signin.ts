@@ -1,7 +1,7 @@
 import express from "express";
 import { Request, Response, NextFunction } from "express";
 import Joi from "joi";
-import Account from "../../schemas/account.model";
+import Account from "@/schemas/account.model";
 
 const router = express.Router();
 

@@ -10,15 +10,14 @@ import dotenv from "dotenv";
 import bcrypto from "bcryptjs";
 import { createAdapter } from "@socket.io/mongo-adapter";
 import { MongoClient } from "mongodb";
-import jwt from "jsonwebtoken";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
 
-import chatHandler from "./modules/socket.io/handler";
+import chatHandler from "@/modules/socket.io/handler";
 // Routers
-import accountRouter from "./routes/account/index";
-import authRouter from "./routes/auth/index";
-import { verifySocketToken } from "./middlewares/jwt/verifyToken";
+import accountRouter from "@/routes/account/index";
+import authRouter from "@/routes/auth/index";
+import { verifySocketToken } from "@/middlewares/jwt/verifyToken";
 
 dotenv.config();
 

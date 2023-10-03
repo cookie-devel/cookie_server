@@ -1,8 +1,8 @@
 import multer from "multer";
 import express from "express";
 import path from "path";
-import { verifyToken } from "../../middlewares/jwt/verifyToken";
 import fs from "fs";
+import { verifyToken } from "@/middlewares/jwt/verifyToken";
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

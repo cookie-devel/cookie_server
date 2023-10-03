@@ -1,24 +1,6 @@
 import { ObjectId } from "mongodb";
 import mongoose, { InferSchemaType, Schema } from "mongoose";
-
-const MessageSchema = new Schema({
-  _id: {
-    type: String,
-  },
-  sender: {
-    type: String,
-    required: true,
-    ref: "Account",
-  },
-  time: {
-    type: Date,
-    required: true,
-  },
-  payload: {
-    type: Object,
-    required: true,
-  },
-});
+import { MessageSchema } from "@/schemas/chat/message.model";
 
 const ChatRoomSchema = new Schema(
   {
@@ -31,7 +13,7 @@ const ChatRoomSchema = new Schema(
       type: String,
       default: "New Chat Room",
     },
-    userIDs: [
+    members: [
       {
         type: String,
         required: true,
@@ -44,6 +26,11 @@ const ChatRoomSchema = new Schema(
         required: true,
       },
     ],
+    createdAt: {
+      type: Date,
+      required: true,
+      default: Date.now,
+    },
   },
   {
     collection: "chats",
@@ -54,10 +41,10 @@ const ChatRoomSchema = new Schema(
       },
     },
     statics: {
-      async createChatRoom({ name, userIDs }) {
+      async createChatRoom({ name, members }) {
         const _room = new this({
           name: name,
-          userIDs: userIDs,
+          members: members,
         });
 
         try {
@@ -86,5 +73,4 @@ const ChatRoomSchema = new Schema(
 );
 
 export type IChatRoom = InferSchemaType<typeof ChatRoomSchema>;
-export type IMessage = InferSchemaType<typeof MessageSchema>;
 export default mongoose.model("Chat", ChatRoomSchema);

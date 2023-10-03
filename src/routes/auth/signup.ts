@@ -2,9 +2,9 @@ import express from "express";
 import { Request, Response, NextFunction } from "express";
 import Joi from "joi";
 import multer from "multer";
-import Account from "../../schemas/account.model";
 import fs from "fs";
 import path from "path";
+import Account from "@/schemas/account.model";
 
 const router = express.Router();
 

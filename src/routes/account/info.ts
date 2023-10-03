@@ -1,7 +1,7 @@
 import express from "express";
 import Joi from "joi";
-import Account from "../../schemas/account.model";
-import { verifyToken } from "../../middlewares/jwt/verifyToken";
+import Account from "@/schemas/account.model";
+import { verifyToken } from "@/middlewares/jwt/verifyToken";
 import _ from "lodash";
 
 const router = express.Router();

@@ -1,9 +1,9 @@
 import { Session, InMemorySessionStore } from "./sessionStore";
 import type { Server, Socket, Namespace } from "socket.io";
 import type { DefaultEventsMap } from "socket.io/dist/typed-events";
-import ChatModel from "../../schemas/chat.model"; // Room, // MessageContent, // Message,
-import { IAccount } from "../../schemas/account.model";
-import { IChatRoom, IMessage } from "../../schemas/chat.model";
+import ChatModel, { IChatRoom } from "@/schemas/chat/room.model";
+import MessageModel, { IMessage } from "@/schemas/chat/message.model";
+import { IAccount } from "@/schemas/account.model";
 
 const ChatEvent = {
   CreateRoom: "create_room",
@@ -26,7 +26,7 @@ interface SocketResponse {}
 
 interface CreateRoomRequest extends SocketRequest {
   name: IChatRoom["name"];
-  userIDs: IChatRoom["userIDs"];
+  members: IChatRoom["members"];
 }
 
 interface CreateRoomResponse extends SocketResponse {
@@ -47,7 +47,11 @@ interface ChatRequest extends SocketRequest {
   content: IMessage["payload"];
 }
 
-type ChatResponse = IMessage;
+interface ChatResponse extends SocketResponse {
+  sender: IAccount["_id"];
+  time: IMessage["time"];
+  payload: IMessage["payload"];
+}
 
 const addPendingEvent = (userid: string, event: string, data: any) => {
   let session = sessionStore.findSession(userid) || {
@@ -99,6 +103,8 @@ export default (
       connected: true,
     });
 
+    console.log(sessionStore.sessions);
+
     // update session
     session = sessionStore.findSession(socket.data.userID);
     // Event Handlers
@@ -107,17 +113,20 @@ export default (
     socket.on(ChatEvent.CreateRoom, async (req: CreateRoomRequest) => {
       const room = await ChatModel.createChatRoom({
         name: req.name,
-        userIDs: req.userIDs,
+        members: req.members,
       });
 
-      socket.join(room._id.toString());
+      const roomID = room._id.toString();
+
+      socket.join(roomID);
+      nsp.to(socket.data.userID).emit(ChatEvent.CreateRoom, { id: roomID });
 
       console.log(
-        `New room created by ${socket.data.userID}: ${room._id} (${room.name})`
+        `New room created by ${socket.data.userID}: ${roomID} (${room.name})`
       );
 
       // Request user to join the room
-      for (const userID of room.userIDs) {
+      for (const userID of room.members) {
         const userSession = sessionStore.findSession(userID);
         console.log(
           `User ${userID} is ${
