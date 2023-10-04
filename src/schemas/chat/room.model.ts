@@ -13,19 +13,24 @@ const ChatRoomSchema = new Schema(
       type: String,
       default: "New Chat Room",
     },
-    members: [
-      {
-        type: String,
-        required: true,
-        ref: "Account",
-      },
-    ],
-    messages: [
-      {
-        type: MessageSchema,
-        required: true,
-      },
-    ],
+    members: {
+      type: [
+        {
+          type: String,
+          required: true,
+          ref: "Account",
+        },
+      ],
+      // validate: [(val) => val.length > 1, "{PATH} must have at least 2 members"],
+    },
+    messages: {
+      type: [
+        {
+          type: MessageSchema,
+          required: true,
+        },
+      ],
+    },
     createdAt: {
       type: Date,
       required: true,
@@ -33,7 +38,7 @@ const ChatRoomSchema = new Schema(
     },
   },
   {
-    collection: "chats",
+    collection: "chatrooms",
     timestamps: true,
     query: {
       getPopulatedById(_id) {
@@ -43,8 +48,8 @@ const ChatRoomSchema = new Schema(
     statics: {
       async createChatRoom({ name, members }) {
         const _room = new this({
-          name: name,
-          members: members,
+          name,
+          members,
         });
 
         try {
