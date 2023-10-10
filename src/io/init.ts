@@ -1,6 +1,6 @@
 import { Namespace, Server as SocketIOServer } from "socket.io";
 import chatHandler from "@/modules/socket.io/handler";
-import bcrypto from "bcryptjs";
+import bcrypt from "bcrypt";
 import { instrument } from "@socket.io/admin-ui";
 import { verifySocketToken } from "@/middlewares/jwt/verifyToken";
 import { chatNSP } from "@/index";
@@ -22,7 +22,7 @@ export const init = (io: SocketIOServer) => {
     auth: {
       type: "basic",
       username: "parkjb",
-      password: bcrypto.hashSync(process.env.SOCKETIO_PW_HASH_KEY!, 10),
+      password: bcrypt.hashSync(process.env.SOCKETIO_PW_HASH_KEY!, 10),
     },
     namespaceName: "/admin",
     mode: "development",
