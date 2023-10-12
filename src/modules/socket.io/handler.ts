@@ -189,41 +189,43 @@ export default (
     // Event: Chat
     socket.on(
       ChatType.ChatEvents.Chat,
-      async ({ id: roomID, payload: payload }: ChatType.ChatRequest) => {
+      async ({ room: roomID, payload: payload }: ChatType.ChatRequest) => {
         // Check if the user is in the room,
         const user = socket.data.userID;
-        const room = await ChatModel.findById(roomID).exec();
+        try {
+          const room = await ChatModel.findById(roomID).exec();
 
-        if (room === null) {
-          console.log(`Room ${roomID} not found`);
-          return;
-        } else if (!room.members.includes(user)) {
+          if (room === null) {
+            throw new Error(`Room ${roomID} not found`);
+          } else if (!room.members.includes(user)) {
+            throw new Error(
+              `User ${user} is not in the room ${roomID} (${room.name})`
+            );
+          }
+
+          // User is in the room
+          await room.addChat({
+            content: payload,
+            sender: socket.data.userID,
+            time: new Date(),
+          });
+
+          const message: ChatType.ChatResponse = {
+            room: roomID.toString(),
+            payload: payload,
+            timestamp: new Date(),
+            sender: socket.data.userID,
+          };
+          nsp.in(roomID.toString()).emit(ChatType.ChatEvents.Chat, message);
+
           console.log(
-            `User ${user} is not in the room ${roomID} (${room.name})`
+            `[${message.timestamp.toLocaleString()}] ${roomID} ${
+              socket.data.userID
+            }: ` + JSON.stringify(payload)
           );
-          return;
+        } catch (err) {
+          console.error(err);
         }
-
-        // User is in the room
-        const chatRoom = await ChatModel.findById(roomID).exec();
-        await chatRoom.addChat({
-          content: payload,
-          sender: socket.data.userID,
-          time: new Date(),
-        });
-
-        const message: ChatType.ChatResponse = {
-          payload: payload,
-          timestamp: new Date(),
-          sender: socket.data.userID,
-        };
-        nsp.in(roomID.toString()).emit(ChatType.ChatEvents.Chat, message);
-
-        console.log(
-          `[${message.timestamp.toLocaleString()}] ${roomID} ${
-            socket.data.userID
-          }: ` + JSON.stringify(payload)
-        );
       }
     );
 
