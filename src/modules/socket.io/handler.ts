@@ -13,7 +13,7 @@ interface ChatSession extends Session {
 const sessionStore = new InMemorySessionStore<ChatSession>();
 
 const addPendingEvent = (userid: string, event: string, data: any) => {
-  let session = sessionStore.findSession(userid) || {
+  const session = sessionStore.findSession(userid) || {
     socketID: null,
     roomIDs: new Set([]),
     pendingEvents: [],

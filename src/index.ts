@@ -51,8 +51,8 @@ mongoClient
   // .then(() => {
   //   const mongoCollection = mongoClient.db("dev-cookie").collection("sessions");
 
-  //   io.adapter(createAdapter(mongoCollection));
-  //   io.listen(3001);
+//   io.adapter(createAdapter(mongoCollection));
+//   io.listen(3001);
 
   //   console.log("IO MongoDB connected: 3001");
   // })

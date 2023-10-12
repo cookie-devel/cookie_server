@@ -94,11 +94,7 @@ export const AccountSchema = new Schema(
           profile,
         });
 
-        try {
-          return account.save();
-        } catch (e) {
-          throw e;
-        }
+        return account.save();
       },
     },
     methods: {
@@ -131,7 +127,7 @@ export const AccountSchema = new Schema(
 );
 
 // Use transform to rename _id to userid (if needed)
-const transform = function (doc: any, ret: any, options: any) {
+const transform = function (doc, ret, options) {
   // ret.userid = doc._id;
   ret.id = doc._id;
   delete ret._id;

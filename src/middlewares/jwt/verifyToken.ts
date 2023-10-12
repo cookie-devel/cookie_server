@@ -6,6 +6,7 @@ import type { DefaultEventsMap } from "socket.io/dist/typed-events";
 import type { ExtendedError } from "socket.io/dist/namespace";
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       decoded?: any;
@@ -14,7 +15,7 @@ declare global {
 }
 
 const verifyToken = (req: Request, res: Response, next: NextFunction) => {
-  let token: string | undefined =
+  const token: string | undefined =
     <string | undefined>req.headers["authorization"] ||
     <string | undefined>req.headers["Authorization"];
 
@@ -27,7 +28,7 @@ const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     );
     return next();
   } catch (e: any) {
-    return errorHandlers.hasOwnProperty(e.name)
+    return Object.prototype.hasOwnProperty.call(errorHandlers, e.name)
       ? errorHandlers[e.name](res, e)
       : res.status(500).json({ name: e.name, message: e.message });
   }
@@ -38,14 +39,17 @@ const verifySocketToken = (
   next: (err?: ExtendedError | undefined) => void
 ) => {
   // for postman testing, access_token is used instead of auth.token
-  const token = socket.handshake.auth.token || socket.handshake.headers.access_token;
+  const token =
+    socket.handshake.auth.token || socket.handshake.headers.access_token;
 
   try {
     if (!token) throw new TokenNotProvidedError();
     socket.data.decoded = jwt.verify(token, process.env.JWT_SECRET_KEY!);
-    socket.data.userID = socket.data.decoded['userid'];
-    socket.data.userName = socket.data.decoded['username'];
-    console.log(`User ${socket.data.userID}(${socket.data.userName}) connected (socketid: ${socket.id})`)
+    socket.data.userID = socket.data.decoded["userid"];
+    socket.data.userName = socket.data.decoded["username"];
+    console.log(
+      `User ${socket.data.userID}(${socket.data.userName}) connected (socketid: ${socket.id})`
+    );
     return next();
   } catch (e: any) {
     if (e.name === "TokenExpireError") {

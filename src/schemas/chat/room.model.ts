@@ -9,7 +9,7 @@ const ChatRoomSchema = new Schema(
     members: {
       type: [{ type: String, required: true, ref: "Account" }],
       validate: [
-        (val: Array<String>) => val.length > 1,
+        (val: Array<string>) => val.length > 1,
         "{PATH} must have at least 2 members",
       ],
     },
@@ -33,12 +33,8 @@ const ChatRoomSchema = new Schema(
           members,
         });
 
-        try {
-          await _room.save();
-          return _room;
-        } catch (err) {
-          throw err;
-        }
+        await _room.save();
+        return _room;
       },
       async addChat(roomID, message) {
         const room = await this.findById(roomID);
