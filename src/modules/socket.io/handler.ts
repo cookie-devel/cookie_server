@@ -1,18 +1,9 @@
 import { Session, InMemorySessionStore } from "./sessionStore";
-import type { Server, Socket, Namespace } from "socket.io";
+import type { Socket, Namespace } from "socket.io";
 import type { DefaultEventsMap } from "socket.io/dist/typed-events";
-import ChatModel, { IChatRoom } from "@/schemas/chat/room.model";
-import MessageModel, { IMessage } from "@/schemas/chat/message.model";
-import { IAccount } from "@/schemas/account.model";
-
-const ChatEvent = {
-  CreateRoom: "create_room",
-  JoinRoom: "join_room",
-  InviteRoom: "invite_room",
-  LeaveRoom: "leave_room",
-  Chat: "chat",
-};
-Object.freeze(ChatEvent);
+import ChatModel from "@/schemas/chat/room.model";
+import * as ChatType from "@/interfaces/chat";
+import { ChatEvents } from "@/interfaces/chat";
 
 interface ChatSession extends Session {
   roomIDs: Set<string>;
@@ -20,34 +11,6 @@ interface ChatSession extends Session {
 }
 
 const sessionStore = new InMemorySessionStore<ChatSession>();
-
-interface SocketRequest {}
-interface SocketResponse {}
-
-interface NewRoomRequest extends SocketRequest {
-  name: IChatRoom["name"];
-  members: IChatRoom["members"];
-}
-
-interface NewRoomResponse extends SocketResponse {
-  id: string;
-  name: IChatRoom["name"];
-  createdAt: IChatRoom["createdAt"];
-  members: IChatRoom["members"];
-}
-
-type JoinRoomRequest = string;
-
-interface ChatRequest extends SocketRequest {
-  roomID: IChatRoom["_id"];
-  content: IMessage["payload"];
-}
-
-interface ChatResponse extends SocketResponse {
-  sender: IAccount["_id"];
-  time: IMessage["time"];
-  payload: IMessage["payload"];
-}
 
 const addPendingEvent = (userid: string, event: string, data: any) => {
   let session = sessionStore.findSession(userid) || {
@@ -106,84 +69,105 @@ export default (
     // Event Handlers
 
     // Create New Room
-    socket.on(ChatEvent.CreateRoom, async (req: NewRoomRequest) => {
-      // Create Room
-      const room = await ChatModel.createChatRoom({
-        name: req.name,
-        members: req.members,
-      });
+    socket.on(
+      ChatEvents.CreateRoom,
+      async (req: ChatType.CreateRoomRequest) => {
+        console.log({ req });
+        // Create Room
+        const room = await ChatModel.createChatRoom({
+          name: req.name,
+          members: [socket.data.userID, ...req.members],
+        });
 
-      const roomID = room._id.toString();
+        const roomID = room._id.toString();
 
-      // Make room manager join the room
-      socket.join(roomID);
-      const res: NewRoomResponse = {
-        id: roomID,
-        name: room.name,
-        createdAt: room.createdAt,
-        members: room.members,
-      };
-      nsp.to(socket.data.userID).emit(ChatEvent.CreateRoom, res);
+        // Make room manager join the room
+        socket.join(roomID);
 
-      console.log(
-        `New room created by ${socket.data.userID}: ${roomID} (${room.name})`
-      );
+        // Tell the room manager that the room is created
+        const res: ChatType.CreateRoomResponse = {
+          id: roomID,
+          name: room.name,
+          createdAt: room.createdAt,
+          members: room.members,
+        };
+        nsp.to(socket.data.userID).emit(ChatEvents.CreateRoom, res);
 
-      // Request user to join the room via invite_room event
-      for (const userID of room.members) {
-        const userSession = sessionStore.findSession(userID);
         console.log(
-          `User ${userID} is ${
-            userSession?.connected ? "connected" : "not connected"
-          }`
+          `New room created by ${socket.data.userID}: ${roomID} (${room.name})`
         );
-        if (userSession) console.log(`userSession: ${userSession}`);
-        if (
-          userSession === undefined || // Case: User to invite is never connected before
-          userSession.connected === false // Case: User to invite is not connected currently but was connected before
-        ) {
-          // TODO: Register the room to the user's account
-          addPendingEvent(userID, ChatEvent.InviteRoom, roomID);
-        } else {
-          // Case: User to invite is currently connected
-          nsp.to(userID).emit(ChatEvent.InviteRoom, roomID);
+
+        // Request user to join the room via invite_room event
+        for (const userID of req.members) {
+          console.log(`User ${userID} is invited to ${roomID}`);
+          const userSession = sessionStore.findSession(userID);
+          console.log(
+            `User ${userID} is ${
+              userSession?.connected ? "connected" : "not connected"
+            }`
+          );
+          if (userSession) console.log(`userSession: ${userSession}`);
+          if (
+            userSession === undefined || // Case: User to invite is never connected before
+            userSession.connected === false // Case: User to invite is not connected currently but was connected before
+          ) {
+            // TODO: Register the room to the user's account
+            addPendingEvent(userID, ChatEvents.InviteRoom, roomID);
+          } else {
+            // Case: User to invite is currently connected
+            nsp.to(userID).emit(ChatEvents.InviteRoom, roomID);
+          }
         }
       }
-    });
+    );
 
     // Event: Join Room
     // Called only when client emits "join_room" event
-    socket.on(ChatEvent.JoinRoom, async (id: JoinRoomRequest) => {
-      const room = await ChatModel.findById(id).exec();
-      if (room === null) {
-        console.log(`Room ${id} not found`);
-        return;
-      } else if (!room.members.includes(socket.data.userID)) {
-        return;
+    socket.on(ChatEvents.JoinRoom, async (id: ChatType.JoinRoomRequest) => {
+      console.group(
+        `[join_room] ${socket.data.userID} is trying to join ${id}`
+      );
+
+      try {
+        const room = await ChatModel.findById(id).exec();
+        if (room === null) {
+          throw new Error(`Room ${id} not found`);
+        } else if (!room.members.includes(socket.data.userID)) {
+          throw new Error(
+            `User ${socket.data.userID} is not in the room ${id} (${room.name})`
+          );
+        }
+        console.log({ room });
+
+        console.log(`User ${socket.data.userID} exists in ${room.members}`);
+        console.log(`User ${socket.data.userID} joined to room ${id}`);
+
+        socket.join(id);
+
+        // const session = sessionStore.findSession(socket.data.userID);
+        // if (session === undefined) throw new Error("Session not found");
+
+        sessionStore.saveSession(socket.data.userID, {
+          ...session,
+          roomIDs: new Set([id.toString(), ...session.roomIDs]),
+        });
+        const res: ChatType.JoinRoomResponse = {
+          id: id,
+          name: room.name,
+          createdAt: room.createdAt,
+          members: room.members,
+        };
+        socket.emit(ChatEvents.JoinRoom, res);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        console.groupEnd();
       }
-
-      console.log(`User ${socket.data.userID} exists in ${room.members}`);
-      console.log(`User ${socket.data.userID} joined to room ${id}`);
-      socket.join(id);
-      // const session = sessionStore.findSession(socket.data.userID);
-      // if (session === undefined) throw new Error("Session not found");
-
-      sessionStore.saveSession(socket.data.userID, {
-        ...session,
-        roomIDs: new Set([id.toString(), ...session.roomIDs]),
-      });
-      const res: NewRoomResponse = {
-        id: id,
-        name: room.name,
-        createdAt: room.createdAt,
-        members: room.members,
-      };
-      socket.emit(ChatEvent.JoinRoom, res);
       // TODO: Announce that new user is joined to the room
     });
 
     // Event: Leave Room
-    socket.on(ChatEvent.LeaveRoom, ({ roomID }) => {
+    socket.on(ChatEvents.LeaveRoom, ({ roomID }) => {
       const user = socket.data.userID;
 
       const delResult = session.roomIDs.delete(roomID);
@@ -197,25 +181,51 @@ export default (
       });
 
       socket.leave(roomID);
-      nsp.in(roomID.toString()).emit(ChatEvent.LeaveRoom, { roomID, user });
+      nsp
+        .in(roomID.toString())
+        .emit(ChatType.ChatEvents.LeaveRoom, { roomID, user });
     });
 
     // Event: Chat
-    socket.on(ChatEvent.Chat, async ({ roomID, content }: ChatRequest) => {
-      const message: ChatResponse = {
-        payload: content,
-        time: new Date(),
-        sender: socket.data.userID,
-      };
-      const chatRoom = await ChatModel.findById(roomID).exec();
+    socket.on(
+      ChatType.ChatEvents.Chat,
+      async ({ id: roomID, payload: payload }: ChatType.ChatRequest) => {
+        // Check if the user is in the room,
+        const user = socket.data.userID;
+        const room = await ChatModel.findById(roomID).exec();
 
-      chatRoom.addChat(message);
-      nsp.in(roomID.toString()).emit(ChatEvent.Chat, message);
+        if (room === null) {
+          console.log(`Room ${roomID} not found`);
+          return;
+        } else if (!room.members.includes(user)) {
+          console.log(
+            `User ${user} is not in the room ${roomID} (${room.name})`
+          );
+          return;
+        }
 
-      console.log(
-        `New message from ${socket.data.userID} to room ${roomID}: ${content.content} (${message.time})`
-      );
-    });
+        // User is in the room
+        const chatRoom = await ChatModel.findById(roomID).exec();
+        await chatRoom.addChat({
+          content: payload,
+          sender: socket.data.userID,
+          time: new Date(),
+        });
+
+        const message: ChatType.ChatResponse = {
+          payload: payload,
+          timestamp: new Date(),
+          sender: socket.data.userID,
+        };
+        nsp.in(roomID.toString()).emit(ChatType.ChatEvents.Chat, message);
+
+        console.log(
+          `[${message.timestamp.toLocaleString()}] ${roomID} ${
+            socket.data.userID
+          }: ` + JSON.stringify(payload)
+        );
+      }
+    );
 
     // Disconnection
     socket.on("disconnect", async () => {

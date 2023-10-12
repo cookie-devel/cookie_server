@@ -3,24 +3,10 @@ import mongoose, { InferSchemaType, Schema } from "mongoose";
 
 const MessageSchema = new Schema(
   {
-    _id: {
-      type: ObjectId,
-      required: true,
-      auto: true,
-    },
-    sender: {
-      type: String,
-      required: true,
-      ref: "Account",
-    },
-    time: {
-      type: Date,
-      required: true,
-    },
-    payload: {
-      type: Object,
-      required: true,
-    },
+    _id: { type: ObjectId, required: true, auto: true },
+    sender: { type: String, required: true, ref: "Account" },
+    time: { type: Date, required: true },
+    content: { type: Object, required: true },
   },
   {
     collection: "messages",

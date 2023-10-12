@@ -4,38 +4,19 @@ import { MessageSchema } from "@/schemas/chat/message.model";
 
 const ChatRoomSchema = new Schema(
   {
-    _id: {
-      type: ObjectId,
-      required: true,
-      auto: true,
-    },
-    name: {
-      type: String,
-      default: "New Chat Room",
-    },
+    _id: { type: ObjectId, required: true, auto: true },
+    name: { type: String, default: "New Chat Room" },
     members: {
-      type: [
-        {
-          type: String,
-          required: true,
-          ref: "Account",
-        },
+      type: [{ type: String, required: true, ref: "Account" }],
+      validate: [
+        (val: Array<String>) => val.length > 1,
+        "{PATH} must have at least 2 members",
       ],
-      // validate: [(val) => val.length > 1, "{PATH} must have at least 2 members"],
     },
     messages: {
-      type: [
-        {
-          type: MessageSchema,
-          required: true,
-        },
-      ],
+      type: [{ type: MessageSchema, required: true }],
     },
-    createdAt: {
-      type: Date,
-      required: true,
-      default: Date.now,
-    },
+    createdAt: { type: Date, required: true, default: Date.now },
   },
   {
     collection: "chatrooms",
@@ -72,6 +53,7 @@ const ChatRoomSchema = new Schema(
     methods: {
       async addChat(message) {
         this.messages.push(message);
+        await this.save();
       },
     },
   }
