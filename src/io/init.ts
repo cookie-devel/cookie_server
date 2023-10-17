@@ -3,7 +3,8 @@ import chatHandler from "@/modules/socket.io/handler";
 import bcrypt from "bcrypt";
 import { instrument } from "@socket.io/admin-ui";
 import { verifySocketToken } from "@/middlewares/jwt/verifyToken";
-import { chatNSP } from "@/index";
+import { chatNSP, locationNSP } from "@/index";
+import locationHandler from "@/modules/socket.io/handler.location";
 
 export const init = (io: SocketIOServer) => {
   const of = io.of;
@@ -16,6 +17,7 @@ export const init = (io: SocketIOServer) => {
 
   // namespace handlers
   handle(chatNSP, chatHandler);
+  handle(locationNSP, locationHandler);
 
   // Admin UI for Socket.IO
   instrument(io, {
