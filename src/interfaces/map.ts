@@ -2,8 +2,7 @@ import { IAccount } from "@/schemas/account.model";
 import { ILocation } from "@/schemas/map/location.model";
 
 export const MapEvents = {
-  SendPosition: "send_position",
-  GetPosition: "get_position",
+  position: "position",
 };
 Object.freeze(MapEvents);
 
@@ -16,7 +15,7 @@ export interface MapRequest extends SocketRequest {
 }
 
 export interface MapResponse extends SocketResponse {
-  sender: IAccount["_id"];
+  userid: IAccount["_id"];
   latitude: ILocation["latitude"];
   longitude: ILocation["longitude"];
 }
