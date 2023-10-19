@@ -30,12 +30,12 @@ export type JoinRoomRequest = string;
 export type JoinRoomResponse = CreateRoomResponse;
 
 export interface ChatRequest extends SocketRequest {
-  room: string;
+  roomId: string;
   payload: IMessage["content"];
 }
 
 export interface ChatResponse extends SocketResponse {
-  room: string;
+  roomId: string;
   sender: IAccount["_id"];
   timestamp: IMessage["time"];
   payload: IMessage["content"];
