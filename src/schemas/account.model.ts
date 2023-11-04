@@ -99,18 +99,21 @@ export const AccountSchema = new Schema(
     },
     methods: {
       generateJWT() {
-        return jwt.sign(
-          {
-            userid: this._id,
-            username: this.name,
-          },
-          process.env.JWT_SECRET_KEY!,
-          {
-            algorithm: "HS256",
-            expiresIn: "7d",
-            issuer: process.env.BASE_URI,
-            subject: "userInfo",
-          }
+        return (
+          "Bearer " +
+          jwt.sign(
+            {
+              userid: this._id,
+              username: this.name,
+            },
+            process.env.JWT_SECRET_KEY!,
+            {
+              algorithm: "HS256",
+              expiresIn: "7d",
+              issuer: process.env.BASE_URI,
+              subject: "userInfo",
+            }
+          )
         );
       },
       verifyPassword(password: string) {

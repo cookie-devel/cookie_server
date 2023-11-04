@@ -27,19 +27,13 @@ export default (
           const friendList = userInfo.friendIDs;
 
           friendList.forEach((friendID) => {
-            // socket.join(friendID);
+            console.log(`sending location to ${friendID}`);
             socket.to(friendID).emit(MapEvents.position, {
               userid: socket.data.userID,
               latitude: latitude,
               longitude: longitude,
             } as MapType.MapResponse);
           });
-
-          // socket.emit(MapEvents.position, {
-          //   userid: socket.data.userID,
-          //   latitude: location.latitude,
-          //   longitude: location.longitude,
-          // } as MapType.MapResponse);
         } catch (error) {
           console.log(error);
         }
