@@ -44,7 +44,10 @@ const verifySocketToken = (
 
   try {
     if (!token) throw new TokenNotProvidedError();
-    socket.data.decoded = jwt.verify(token, process.env.JWT_SECRET_KEY!);
+    socket.data.decoded = jwt.verify(
+      token.replace("Bearer ", ""),
+      process.env.JWT_SECRET_KEY!
+    );
     socket.data.userID = socket.data.decoded["userid"];
     socket.data.userName = socket.data.decoded["username"];
     console.log(
