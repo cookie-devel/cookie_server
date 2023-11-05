@@ -9,10 +9,11 @@ import dotenv from "dotenv";
 import { MongoClient } from "mongodb";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
+import swaggerFile from "@/swagger/swagger-output.json";
+import swaggerUi from "swagger-ui-express";
+
 // Routers
-import accountRouter from "@/routes/account/index";
-import authRouter from "@/routes/auth/index";
-import chatRouter from "@/routes/chat/index";
+import routers from "@/routes";
 import { init as ioinit } from "@/io/init";
 
 dotenv.config();
@@ -64,10 +65,18 @@ mongoose
   .then(() => console.log(`Connected to MongoDB ${process.env.MONGODB_URI}`))
   .catch((err) => console.log("Could not connect to MongoDB", err));
 
+// Swagger
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerFile, { explorer: true })
+);
+
 // Routes
-app.use("/account", accountRouter);
-app.use("/auth", authRouter);
-app.use("/chat", chatRouter);
+app.use("/", routers);
+// app.use("/account", accountRouter);
+// app.use("/auth", authRouter);
+// app.use("/chat", chatRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

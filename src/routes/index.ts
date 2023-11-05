@@ -1,11 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 import express from "express";
 
+import accountRouter from "@/routes/account/index";
+import authRouter from "@/routes/auth/index";
+import chatRouter from "@/routes/chat/index";
+
 const router = express.Router();
 
-/* GET home page. */
-router.get("/", function (req: Request, res: Response, next: NextFunction) {
-  res.render("index", { title: "Express" });
-});
+// Routes
+router.use("/account", accountRouter);
+router.use("/auth", authRouter);
+router.use("/chat", chatRouter);
 
-module.exports = router;
+export { authRouter, accountRouter, chatRouter };
+export default router;
