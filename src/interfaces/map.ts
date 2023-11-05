@@ -1,5 +1,9 @@
 import { IAccount } from "@/schemas/account.model";
-import { ILocation } from "@/schemas/map/location.model";
+
+interface ILocation {
+  latitude: number;
+  longitude: number;
+}
 
 export const MapEvents = {
   position: "position",
