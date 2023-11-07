@@ -18,13 +18,9 @@ function hash(password: string) {
 export const ProfileSchema = new Schema({
   image: {
     type: String,
-    required: true,
-    default: "https://i.imgur.com/1Q9ZQ9r.png",
   },
   message: {
     type: String,
-    required: true,
-    default: "",
   },
 });
 
@@ -124,6 +120,18 @@ export const AccountSchema = new Schema(
         return (await this.populate("friendIDs", "_id name profile"))[
           "friendIDs"
         ];
+      },
+      addChatRoom(roomID: string) {
+        this.chatRoomIDs.push(roomID);
+        this.save();
+      },
+      async getChatRooms() {
+        return (
+          await this.populate(
+            "chatRoomIDs",
+            "_id name members messages createdAt"
+          )
+        )["chatRoomIDs"];
       },
     },
   }

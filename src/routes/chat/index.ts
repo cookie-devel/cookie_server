@@ -1,9 +1,9 @@
 import express from "express";
 
-import createRoomRouter from "./create_room";
+import getRoomsRouter from "./rooms";
 
 const router = express.Router();
 
-router.use("/create_room", createRoomRouter);
+router.use("/rooms", getRoomsRouter);
 
 export default router;

@@ -54,5 +54,6 @@ const ChatRoomSchema = new Schema(
   }
 );
 
+export { ChatRoomSchema };
 export type IChatRoom = InferSchemaType<typeof ChatRoomSchema>;
-export default mongoose.model("Chat", ChatRoomSchema);
+export default mongoose.model("ChatRoom", ChatRoomSchema);
