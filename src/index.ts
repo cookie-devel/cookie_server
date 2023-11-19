@@ -1,25 +1,23 @@
-import createError from "http-errors";
-import path from "path";
-import cookieParser from "cookie-parser";
-import logger from "morgan";
 import http from "http";
-import { Server as SocketIOServer } from "socket.io";
-import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { MongoClient } from "mongodb";
+import path from "path";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
-import swaggerFile from "@/swagger/swagger-output.json";
-import swaggerUi from "swagger-ui-express";
-
-// Routers
-import routers from "@/routes";
-import { init as ioinit } from "@/io/init";
 
 dotenv.config();
 
 const app = express();
-export const server = http.createServer(app);
+const server = http.createServer(app);
+
+// ****************************************************
+// Socket.IO
+// ****************************************************
+import { Server as SocketIOServer } from "socket.io";
+import { instrument } from "@socket.io/admin-ui";
+import chatHandler from "@/io/handler.chat";
+import locationHandler from "@/io/handler.location";
+import { verifySocketToken } from "@/middlewares/verifyToken";
+import bcrypt from "bcrypt";
 
 const io = new SocketIOServer(server, {
   cors: {
@@ -27,25 +25,45 @@ const io = new SocketIOServer(server, {
     credentials: true,
   },
 });
+// Admin UI for Socket.IO
+instrument(io, {
+  // auth: false,
+  auth: {
+    type: "basic",
+    username: "parkjb",
+    password: bcrypt.hashSync(process.env.SOCKETIO_PW_HASH_KEY!, 10),
+  },
+  mode: "development",
+});
 
 export const chatNSP = io.of("/chat");
 export const locationNSP = io.of("/location");
+chatNSP.use(verifySocketToken);
+locationNSP.use(verifySocketToken);
 
-ioinit(io);
+// This occurs collision with admin-ui
+// const of = io.of;
+// io.of = (...args) => {
+//   const nsp = of.call(io, ...args);
+//   nsp.use(verifySocketToken);
+//   return nsp;
+// };
+//
 
-app.use(express.static(path.join(__dirname, "../public")));
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+const handle = (nsp, handler) => handler(nsp);
 
-// view engine setup
-app.set("views", path.join(__dirname, "../views"));
-app.set("view engine", "pug");
+// namespace handlers
+handle(chatNSP, chatHandler);
+handle(locationNSP, locationHandler);
 
-app.use(logger("dev"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+console.log("Socket.IO Initialized");
+console.log(`${process.env.SOCKETIO_PW_HASH_KEY}`);
 
-// MongoDB
+// ****************************************************
+// Mongoose
+// ****************************************************
+import { MongoClient } from "mongodb";
+import mongoose from "mongoose";
 const mongoClient = new MongoClient(process.env.MONGODB_URI!);
 mongoClient
   .connect()
@@ -64,6 +82,28 @@ mongoose
   .connect(process.env.MONGODB_URI!)
   .then(() => console.log(`Connected to MongoDB ${process.env.MONGODB_URI}`))
   .catch((err) => console.log("Could not connect to MongoDB", err));
+
+// ****************************************************
+// Express Middlewares
+// ****************************************************
+import cookieParser from "cookie-parser";
+import logger from "morgan";
+import createError from "http-errors";
+import swaggerFile from "@/swagger/swagger-output.json";
+import swaggerUi from "swagger-ui-express";
+import routers from "@/routes";
+
+app.use(express.static(path.join(__dirname, "../public")));
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
+// view engine setup
+app.set("views", path.join(__dirname, "../views"));
+app.set("view engine", "pug");
+
+app.use(logger("dev"));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Swagger
 app.use(
