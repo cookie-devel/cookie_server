@@ -59,7 +59,7 @@ export const AccountSchema = new Schema(
     ],
     chatRoomIDs: [
       {
-        type: String,
+        type: mongoose.Types.ObjectId,
         ref: "ChatRoom",
       },
     ],
@@ -121,8 +121,8 @@ export const AccountSchema = new Schema(
           "friendIDs"
         ];
       },
-      addChatRoom(roomID: string) {
-        this.chatRoomIDs.push(roomID);
+      addChatRoom(roomId) {
+        this.chatRoomIDs.push(roomId);
         this.save();
       },
       async getChatRooms() {

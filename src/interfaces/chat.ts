@@ -1,6 +1,6 @@
 import { IAccount } from "@/schemas/account.model";
-import { IChatRoom } from "@/schemas/chat/room.model";
-import { IMessage } from "@/schemas/chat/message.model";
+import { IChatRoom } from "@/schemas/chatroom.model";
+// import { IMessage } from "@/schemas/chat/message.model";
 
 export const ChatEvents = {
   CreateRoom: "create_room",
@@ -31,12 +31,12 @@ export type JoinRoomResponse = CreateRoomResponse;
 
 export interface ChatRequest extends SocketRequest {
   roomId: string;
-  payload: IMessage["content"];
+  payload: any;
 }
 
 export interface ChatResponse extends SocketResponse {
   roomId: string;
+  payload: any;
   sender: IAccount["_id"];
-  timestamp: IMessage["time"];
-  payload: IMessage["content"];
+  timestamp: Date;
 }
