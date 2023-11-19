@@ -1,9 +1,10 @@
 import { Session, InMemorySessionStore } from "./sessionStore";
 import type { Socket, Namespace } from "socket.io";
 import type { DefaultEventsMap } from "socket.io/dist/typed-events";
-import ChatModel from "@/schemas/chat/room.model";
+import ChatModel from "@/schemas/chatroom.model";
 import * as ChatType from "@/interfaces/chat";
 import { ChatEvents } from "@/interfaces/chat";
+import Account from "@/schemas/account.model";
 
 interface ChatSession extends Session {
   roomIDs: Set<string>;
@@ -35,13 +36,24 @@ const addPendingEvent = (userid: string, event: string, data: any) => {
 export default (
   nsp: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
 ) => {
-  nsp.on("connection", (socket: Socket) => {
+  nsp.on("connection", async (socket: Socket) => {
     console.log(
       `${socket.data.userID} (${socket.data.userName}) connected to chatHandler Namespace (socketid: ${socket.id})`
     );
 
     socket.join(socket.data.userID);
     console.log(`Joined to ${socket.data.userID}`);
+
+    // Initialization
+    const account = await Account.findById(socket.data.userID).exec();
+    if (account === null) throw new Error("Account not found");
+    console.log(account);
+
+    // Join all registered chat rooms
+    account.chatRoomIDs.forEach((roomID) => {
+      socket.join(roomID.toString());
+      console.log(`Joined to ${roomID}`);
+    });
 
     // SESSION
     // find existing session
@@ -74,49 +86,54 @@ export default (
       async (req: ChatType.CreateRoomRequest) => {
         console.log({ req });
         // Create Room
-        const room = await ChatModel.createChatRoom({
-          name: req.name,
-          members: [socket.data.userID, ...req.members],
-        });
+        try {
+          const room = await ChatModel.insert({
+            name: req.name,
+            members: [socket.data.userID, ...req.members],
+          });
+          const roomId = room._id.toString();
 
-        const roomID = room._id.toString();
+          // Make room manager join the room
+          account.addChatRoom(roomId);
+          await socket.join(roomId);
 
-        // Make room manager join the room
-        socket.join(roomID);
+          // Tell the room manager that the room is created successfully
+          const res: ChatType.CreateRoomResponse = {
+            id: roomId,
+            name: room.name,
+            createdAt: room.createdAt,
+            members: room.members,
+          };
+          nsp.to(socket.data.userID).emit(ChatEvents.CreateRoom, res);
 
-        // Tell the room manager that the room is created
-        const res: ChatType.CreateRoomResponse = {
-          id: roomID,
-          name: room.name,
-          createdAt: room.createdAt,
-          members: room.members,
-        };
-        nsp.to(socket.data.userID).emit(ChatEvents.CreateRoom, res);
-
-        console.log(
-          `New room created by ${socket.data.userID}: ${roomID} (${room.name})`
-        );
-
-        // Request user to join the room via invite_room event
-        for (const userID of req.members) {
-          console.log(`User ${userID} is invited to ${roomID}`);
-          const userSession = sessionStore.findSession(userID);
           console.log(
-            `User ${userID} is ${
-              userSession?.connected ? "connected" : "not connected"
-            }`
+            `New room created by ${socket.data.userID}: ${roomId} (${room.name})`
           );
-          if (userSession) console.log(`userSession: ${userSession}`);
-          if (
-            userSession === undefined || // Case: User to invite is never connected before
-            userSession.connected === false // Case: User to invite is not connected currently but was connected before
-          ) {
-            // TODO: Register the room to the user's account
-            addPendingEvent(userID, ChatEvents.InviteRoom, roomID);
-          } else {
-            // Case: User to invite is currently connected
-            nsp.to(userID).emit(ChatEvents.InviteRoom, roomID);
+
+          // Request user to join the room via invite_room event
+          for (const userID of req.members) {
+            console.log(`User ${userID} is invited to ${roomId}`);
+            const userSession = sessionStore.findSession(userID);
+            console.log(
+              `User ${userID} is ${
+                userSession?.connected ? "connected" : "not connected"
+              }`
+            );
+            if (userSession) console.log(`userSession: ${userSession}`);
+            if (
+              userSession === undefined || // Case: User to invite is never connected before
+              userSession.connected === false // Case: User to invite is not connected currently but was connected before
+            ) {
+              // TODO: Register the room to the user's account
+              addPendingEvent(userID, ChatEvents.InviteRoom, roomId);
+            } else {
+              // Case: User to invite is currently connected
+              nsp.to(userID).emit(ChatEvents.InviteRoom, roomId);
+            }
           }
+        } catch (err) {
+          console.error(err);
+          socket.emit("error", err);
         }
       }
     );
@@ -130,19 +147,22 @@ export default (
 
       try {
         const room = await ChatModel.findById(id).exec();
-        if (room === null) {
-          throw new Error(`Room ${id} not found`);
-        } else if (!room.members.includes(socket.data.userID)) {
+        if (room === null) throw new Error(`Room ${id} not found`);
+        else if (!room.members.includes(socket.data.userID))
           throw new Error(
             `User ${socket.data.userID} is not in the room ${id} (${room.name})`
           );
-        }
+
         console.log({ room });
 
         console.log(`User ${socket.data.userID} exists in ${room.members}`);
         console.log(`User ${socket.data.userID} joined to room ${id}`);
 
-        socket.join(id);
+        account.addChatRoom(id);
+        await socket.join(id);
+
+        console.log(socket.rooms);
+        console.log(`success: ${socket.rooms.has(id)}`);
 
         // const session = sessionStore.findSession(socket.data.userID);
         // if (session === undefined) throw new Error("Session not found");
@@ -151,15 +171,18 @@ export default (
           ...session,
           roomIDs: new Set([id.toString(), ...session.roomIDs]),
         });
+
         const res: ChatType.JoinRoomResponse = {
           id: id,
           name: room.name,
           createdAt: room.createdAt,
           members: room.members,
         };
+
         socket.emit(ChatEvents.JoinRoom, res);
       } catch (err) {
         console.error(err);
+        socket.emit("error", err);
       } finally {
         console.groupEnd();
       }
@@ -193,15 +216,14 @@ export default (
         // Check if the user is in the room,
         const user = socket.data.userID;
         try {
+          console.log({ roomId, payload });
           const room = await ChatModel.findById(roomId).exec();
 
-          if (room === null) {
-            throw new Error(`Room ${roomId} not found`);
-          } else if (!room.members.includes(user)) {
+          if (room === null) throw new Error(`Room ${roomId} not found`);
+          else if (!room.members.includes(user))
             throw new Error(
               `User ${user} is not in the room ${roomId} (${room.name})`
             );
-          }
 
           // User is in the room
           await room.addChat({
@@ -211,19 +233,13 @@ export default (
           });
 
           const message: ChatType.ChatResponse = {
-            // id: id,
             roomId: roomId.toString(),
             payload: payload,
             timestamp: new Date(),
             sender: socket.data.userID,
           };
-          nsp.in(roomId.toString()).emit(ChatType.ChatEvents.Chat, message);
 
-          console.log(
-            `[${message.timestamp.toLocaleString()}] ${roomId} ${
-              socket.data.userID
-            }: ` + JSON.stringify(payload)
-          );
+          nsp.in(roomId.toString()).emit(ChatType.ChatEvents.Chat, message);
         } catch (err) {
           console.error(err);
         }
