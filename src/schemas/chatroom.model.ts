@@ -51,6 +51,7 @@ const ChatRoomSchema = new Schema(
     methods: {
       async addChat(message) {
         this.messages.push(message);
+        await this.save();
       },
     },
   }
