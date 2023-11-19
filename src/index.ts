@@ -23,7 +23,7 @@ export const server = http.createServer(app);
 
 const io = new SocketIOServer(server, {
   cors: {
-    origin: ["https://admin.socket.io", "http://localhost:8080"],
+    origin: ["https://admin.socket.io"],
     credentials: true,
   },
 });
@@ -74,9 +74,6 @@ app.use(
 
 // Routes
 app.use("/", routers);
-// app.use("/account", accountRouter);
-// app.use("/auth", authRouter);
-// app.use("/chat", chatRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

@@ -2,6 +2,7 @@ import express from "express";
 import { Request, Response, NextFunction } from "express";
 import Account from "@/schemas/account.model";
 import Joi from "joi";
+import validator from "@/middlewares/validator";
 const router = express.Router();
 
 const schema = Joi.object({
@@ -11,19 +12,7 @@ const schema = Joi.object({
   .or("userid", "phone")
   .required();
 
-const validate = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    await schema.validateAsync(req.query);
-  } catch (e: any) {
-    return res.status(400).json({
-      name: e.name,
-      message: e.message,
-    });
-  }
-  next();
-};
-
-router.get("/", validate, async (req, res) => {
+router.get("/", validator(schema), async (req, res) => {
   const { userid, phone } = req.query;
 
   try {

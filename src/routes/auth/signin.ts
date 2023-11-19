@@ -2,6 +2,7 @@ import express from "express";
 import { Request, Response, NextFunction } from "express";
 import Joi from "joi";
 import Account from "@/schemas/account.model";
+import validator from "@/middlewares/validator";
 
 const router = express.Router();
 
@@ -10,16 +11,7 @@ const schema = Joi.object({
   password: Joi.string().min(10).max(30).required(),
 });
 
-const validate = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    await schema.validateAsync(req.body);
-  } catch (e: any) {
-    return res.status(400).json({ message: e.message });
-  }
-  next();
-};
-
-router.post("/", validate, async function (req, res) {
+router.post("/", validator(schema), async function (req, res, next) {
   const { userid, password } = req.body;
 
   try {
@@ -33,7 +25,7 @@ router.post("/", validate, async function (req, res) {
       : res.status(401).json({ success: false, message: "Unauthorized" });
   } catch (e) {
     console.error(e);
-    return res.status(500).send({ message: "Internal Server Error" });
+    return next(e);
   }
 });
 

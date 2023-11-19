@@ -5,6 +5,7 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 import Account from "@/schemas/account.model";
+import validator from "@/middlewares/validator";
 
 const router = express.Router();
 
@@ -18,15 +19,6 @@ const schema = Joi.object({
   phone: Joi.string().min(11).max(11).required(),
   profile_message: Joi.string().optional(),
 });
-
-const validate = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    await schema.validateAsync(req.body);
-  } catch (e: any) {
-    return res.status(400).json({ message: e.message });
-  }
-  next();
-};
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -48,7 +40,7 @@ const upload = multer({ storage });
 router.post(
   "/",
   upload.single("profile_image"),
-  validate,
+  validator(schema),
   async (req, res, next) => {
     try {
       const result = await Account.createAccount({
@@ -70,18 +62,8 @@ router.post(
         },
       });
     } catch (e: any) {
-      if (e.name === "MongoServerError") {
-        console.log({ name: e.name, message: e.message });
-        return res.status(500).json({
-          name: e.code,
-          message: e.message,
-        });
-      } else {
-        return res.status(500).json({
-          name: "Error",
-          message: e.message,
-        });
-      }
+      console.error(e);
+      return next(e);
     }
   }
 );

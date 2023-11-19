@@ -1,4 +1,3 @@
-import { Request, Response, NextFunction } from "express";
 import express from "express";
 
 import accountRouter from "@/routes/account/index";
@@ -12,5 +11,4 @@ router.use("/account", accountRouter);
 router.use("/auth", authRouter);
 router.use("/chat", chatRouter);
 
-export { authRouter, accountRouter, chatRouter };
 export default router;
