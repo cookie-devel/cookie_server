@@ -153,16 +153,8 @@ export default (
             `User ${socket.data.userID} is not in the room ${id} (${room.name})`
           );
 
-        console.log({ room });
-
-        console.log(`User ${socket.data.userID} exists in ${room.members}`);
-        console.log(`User ${socket.data.userID} joined to room ${id}`);
-
         account.addChatRoom(id);
         await socket.join(id);
-
-        console.log(socket.rooms);
-        console.log(`success: ${socket.rooms.has(id)}`);
 
         // const session = sessionStore.findSession(socket.data.userID);
         // if (session === undefined) throw new Error("Session not found");
@@ -190,7 +182,7 @@ export default (
     });
 
     // Event: Leave Room
-    socket.on(ChatEvents.LeaveRoom, ({ roomID }) => {
+    socket.on(ChatEvents.LeaveRoom, async ({ roomID }) => {
       const user = socket.data.userID;
 
       const delResult = session.roomIDs.delete(roomID);
@@ -203,7 +195,7 @@ export default (
         connected: true,
       });
 
-      socket.leave(roomID);
+      await socket.leave(roomID);
       nsp
         .in(roomID.toString())
         .emit(ChatType.ChatEvents.LeaveRoom, { roomID, user });
@@ -213,10 +205,11 @@ export default (
     socket.on(
       ChatType.ChatEvents.Chat,
       async ({ roomId, payload }: ChatType.ChatRequest) => {
+        console.log(`User ${socket.data.userID} sent a message to ${roomId}`);
+        console.log(payload);
         // Check if the user is in the room,
         const user = socket.data.userID;
         try {
-          console.log({ roomId, payload });
           const room = await ChatModel.findById(roomId).exec();
 
           if (room === null) throw new Error(`Room ${roomId} not found`);
@@ -233,13 +226,14 @@ export default (
           });
 
           const message: ChatType.ChatResponse = {
-            roomId: roomId.toString(),
+            roomId: roomId,
             payload: payload,
             timestamp: new Date(),
             sender: socket.data.userID,
           };
 
-          nsp.in(roomId.toString()).emit(ChatType.ChatEvents.Chat, message);
+          nsp.in(roomId).emit(ChatType.ChatEvents.Chat, message);
+          console.log(`Message sent to ${roomId}`);
         } catch (err) {
           console.error(err);
         }

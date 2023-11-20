@@ -27,12 +27,14 @@ const io = new SocketIOServer(server, {
 });
 // Admin UI for Socket.IO
 instrument(io, {
-  // auth: false,
-  auth: {
-    type: "basic",
-    username: "parkjb",
-    password: bcrypt.hashSync(process.env.SOCKETIO_PW_HASH_KEY!, 10),
-  },
+  auth:
+    process.env.NODE_ENV === "development"
+      ? false
+      : {
+        type: "basic",
+        username: process.env.SOCKETIO_ADMIN_USERNAME!,
+        password: bcrypt.hashSync(process.env.SOCKETIO_PW_HASH_KEY!, 10),
+      },
   mode: "development",
 });
 
@@ -57,7 +59,6 @@ handle(chatNSP, chatHandler);
 handle(locationNSP, locationHandler);
 
 console.log("Socket.IO Initialized");
-console.log(`${process.env.SOCKETIO_PW_HASH_KEY}`);
 
 // ****************************************************
 // Mongoose
@@ -127,8 +128,7 @@ app.use(function (err: any, req: Request, res: Response, next: NextFunction) {
   res.locals.error = req.app.get("env") === "development" ? err : {};
 
   // render the error page
-  res.status(err.status || 500);
-  res.render("error");
+  return res.status(err.status || 500).json(err);
 });
 
 server.listen(process.env.PORT, () => {
