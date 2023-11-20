@@ -50,10 +50,25 @@ export default (
     console.log(account);
 
     // Join all registered chat rooms
-    account.chatRoomIDs.forEach((roomID) => {
+    // account.chatRoomIDs.forEach((roomID) => {
+    //   socket.join(roomID.toString());
+    //   console.log(`Joined to ${roomID}`);
+    // });
+    //
+    account.chatRoomIDs.forEach(async (roomID) => {
       socket.join(roomID.toString());
-      console.log(`Joined to ${roomID}`);
+
+      const room = await ChatModel.findById(roomID).exec();
+      const res: ChatType.JoinRoomResponse = {
+        id: roomID.toString(),
+        name: room.name,
+        createdAt: room.createdAt,
+        members: room.members,
+        messages: room.messages,
+      };
+      socket.emit(ChatEvents.JoinRoom, res);
     });
+    // socket.join(account.chatRoomIDs.map((roomID) => roomID.toString()));
 
     // SESSION
     // find existing session
@@ -103,6 +118,7 @@ export default (
             name: room.name,
             createdAt: room.createdAt,
             members: room.members,
+            messages: room.messages,
           };
           nsp.to(socket.data.userID).emit(ChatEvents.CreateRoom, res);
 
@@ -169,6 +185,7 @@ export default (
           name: room.name,
           createdAt: room.createdAt,
           members: room.members,
+          messages: room.messages,
         };
 
         socket.emit(ChatEvents.JoinRoom, res);

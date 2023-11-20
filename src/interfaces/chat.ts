@@ -24,6 +24,7 @@ export interface CreateRoomResponse extends SocketResponse {
   name: IChatRoom["name"];
   createdAt: IChatRoom["createdAt"];
   members: IChatRoom["members"];
+  messages: IChatRoom["messages"];
 }
 
 export type JoinRoomRequest = string;
