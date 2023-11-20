@@ -56,8 +56,6 @@ export default (
     // });
     //
     account.chatRoomIDs.forEach(async (roomID) => {
-      socket.join(roomID.toString());
-
       const room = await ChatModel.findById(roomID).exec();
       const res: ChatType.JoinRoomResponse = {
         id: roomID.toString(),
@@ -66,6 +64,7 @@ export default (
         members: room.members,
         messages: room.messages,
       };
+      socket.join(roomID.toString());
       socket.emit(ChatEvents.JoinRoom, res);
     });
     // socket.join(account.chatRoomIDs.map((roomID) => roomID.toString()));
@@ -77,8 +76,10 @@ export default (
     // TODO: Handle Pending Events
     if (session !== undefined) {
       for (const pendingEvent of session.pendingEvents) {
+        socket.emit(pendingEvent.event, pendingEvent.data);
         // socket.dispatchEvent(pendingEvent.event, pendingEvent.data);
       }
+      session.pendingEvents = [];
     }
 
     // register the session to the session store
