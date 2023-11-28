@@ -235,20 +235,29 @@ export default (
             throw new Error(
               `User ${user} is not in the room ${roomId} (${room.name})`
             );
-
-          // User is in the room
-          await room.addChat({
-            content: payload,
-            sender: socket.data.userID,
-            time: new Date(),
-          });
-
           const message: ChatType.ChatResponse = {
             roomId: roomId,
             payload: payload,
             timestamp: new Date(),
             sender: socket.data.userID,
           };
+          // User is in the room
+          await room.addChat(message);
+
+          // Message Type
+          // const Message({
+          //   required this.author,
+          //   this.createdAt,
+          //   required this.id,
+          //   this.metadata,
+          //   this.remoteId,
+          //   this.repliedMessage,
+          //   this.roomId,
+          //   this.showStatus,
+          //   this.status,
+          //   required this.type,
+          //   this.updatedAt,
+          // });
 
           nsp.in(roomId).emit(ChatType.ChatEvents.Chat, message);
           console.log(`Message sent to ${roomId}`);

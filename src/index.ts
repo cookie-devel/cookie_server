@@ -70,10 +70,10 @@ mongoClient
   .connect()
   // .then(() => {
   //   const mongoCollection = mongoClient.db("dev-cookie").collection("sessions");
-
-//   io.adapter(createAdapter(mongoCollection));
-//   io.listen(3001);
-
+  //
+  //   io.adapter(createAdapter(mongoCollection));
+  //   io.listen(3001);
+  //
   //   console.log("IO MongoDB connected: 3001");
   // })
   .catch((err) => console.log(err));
@@ -93,6 +93,7 @@ import createError from "http-errors";
 import swaggerFile from "@/swagger/swagger-output.json";
 import swaggerUi from "swagger-ui-express";
 import routers from "@/routes";
+import { createAdapter } from "@socket.io/mongo-adapter";
 
 app.use(express.static(path.join(__dirname, "../public")));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
