@@ -10,6 +10,18 @@ const app = express();
 const server = http.createServer(app);
 
 // ****************************************************
+// Firebase Admin SDK
+// ****************************************************
+import admin from "firebase-admin";
+import serviceAccount from "../cookie-fire-firebase-adminsdk-4bs90-48c29705f6.json";
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+  databaseURL:
+    "https://cookie-fire-default-rtdb.asia-southeast1.firebasedatabase.app",
+});
+
+// ****************************************************
 // Socket.IO
 // ****************************************************
 import { Server as SocketIOServer } from "socket.io";

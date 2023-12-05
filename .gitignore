@@ -4,3 +4,4 @@ uploads/
 dist/
 .DS_Store
 .eslintcache
+cookie-*-firebase-adminsdk-*.json
