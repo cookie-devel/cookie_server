@@ -15,8 +15,8 @@ export default (
     socket.join(socket.data.userID);
     console.log(`Joined to ${socket.data.userID}`);
 
+    // send location to friends
     socket.on(
-      // MapType.MapEvents.SendPosition,
       MapType.MapEvents.position,
       async ({ latitude, longitude }: MapType.MapRequest) => {
         console.log(`${socket.data.userID} ${MapEvents.position}`);
@@ -34,6 +34,23 @@ export default (
               longitude: longitude,
             } as MapType.MapResponse);
           });
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    );
+
+    // request share to friend
+    socket.on(
+      MapType.MapEvents.requestShare,
+      async ({ userid }: MapType.RequestShareRequest) => {
+        console.log(`${socket.data.userID} ${MapEvents.requestShare}`);
+        try {
+          console.log("request share", userid);
+
+          socket.to(userid).emit(MapEvents.requestShare, {
+            userid: socket.data.userID,
+          } as MapType.RequestShareResponse);
         } catch (error) {
           console.log(error);
         }
