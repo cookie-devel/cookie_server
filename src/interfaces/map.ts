@@ -15,6 +15,7 @@ export interface SocketRequest {}
 export interface SocketResponse {}
 
 export interface MapRequest extends SocketRequest {
+  friends: any["userid"];
   latitude: ILocation["latitude"];
   longitude: ILocation["longitude"];
 }
