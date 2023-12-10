@@ -2,7 +2,6 @@ import { Namespace, Socket } from "socket.io";
 import { DefaultEventsMap } from "socket.io/dist/typed-events";
 import * as MapType from "@/interfaces/map";
 import { MapEvents } from "@/interfaces/map";
-import Account from "@/schemas/account.model";
 
 export default (
   nsp: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
