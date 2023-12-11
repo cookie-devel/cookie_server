@@ -63,6 +63,12 @@ export const AccountSchema = new Schema(
         ref: "ChatRoom",
       },
     ],
+    deviceTokens: [
+      {
+        type: String,
+        required: true,
+      },
+    ],
   },
   {
     collection: "accounts",
