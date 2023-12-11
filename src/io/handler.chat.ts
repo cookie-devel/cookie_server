@@ -7,7 +7,6 @@ import { ChatEvents } from "@/interfaces/chat";
 import Account from "@/schemas/account.model";
 
 interface ChatSession extends Session {
-  roomIDs: Set<string>;
   pendingEvents: { event: string; data: any }[];
 }
 
@@ -16,7 +15,6 @@ const sessionStore = new InMemorySessionStore<ChatSession>();
 const addPendingEvent = (userid: string, event: string, data: any) => {
   const session = sessionStore.findSession(userid) || {
     socketID: null,
-    roomIDs: new Set([]),
     pendingEvents: [],
     connected: false,
   };
@@ -38,23 +36,45 @@ export default (
 ) => {
   nsp.on("connection", async (socket: Socket) => {
     console.log(
-      `${socket.data.userID} (${socket.data.userName}) connected to chatHandler Namespace (socketid: ${socket.id})`
+      `[CHAT] ${socket.data.userID} (${socket.data.userName}) connected to chatHandler Namespace (socketid: ${socket.id})`
     );
 
-    socket.join(socket.data.userID);
-    console.log(`Joined to ${socket.data.userID}`);
-
     // Initialization
+    socket.join(socket.data.userID);
+    console.log(`[CHAT] Joined to ${socket.data.userID}`);
+
     const account = await Account.findById(socket.data.userID).exec();
     if (account === null) throw new Error("Account not found");
+    console.log("[CHAT] Joined User's Account");
     console.log(account);
 
-    // Join all registered chat rooms
-    // account.chatRoomIDs.forEach((roomID) => {
-    //   socket.join(roomID.toString());
-    //   console.log(`Joined to ${roomID}`);
-    // });
-    //
+    // SESSION
+    // find existing session
+    let session = sessionStore.findSession(socket.data.userID);
+    const getSession = () => sessionStore.findSession(socket.data.userID);
+
+    console.log(`[CHAT] ${socket.data.userID}'s Session Information`);
+    console.log(getSession());
+
+    // TODO: Handle Pending Events
+    if (session !== undefined) {
+      for (const pendingEvent of session.pendingEvents) {
+        socket.emit(pendingEvent.event, pendingEvent.data);
+      }
+    }
+
+    // register the session to the session store
+    session = sessionStore.saveSession(socket.data.userID, {
+      socketID: socket.id,
+      pendingEvents: [],
+      connected: true,
+    });
+
+    console.log(`[CHAT] ${socket.data.userID}'s Session Information`);
+    console.log(getSession());
+
+    // Join Existing Rooms
+    console.log(`[CHAT] Joining Existing Rooms`);
     account.chatRoomIDs.forEach(async (roomID) => {
       const room = await ChatModel.findById(roomID).exec();
       const res: ChatType.JoinRoomResponse = {
@@ -67,39 +87,13 @@ export default (
       socket.join(roomID.toString());
       socket.emit(ChatEvents.JoinRoom, res);
     });
-    // socket.join(account.chatRoomIDs.map((roomID) => roomID.toString()));
 
-    // SESSION
-    // find existing session
-    let session: ChatSession = sessionStore.findSession(socket.data.userID);
-
-    // TODO: Handle Pending Events
-    if (session !== undefined) {
-      for (const pendingEvent of session.pendingEvents) {
-        socket.emit(pendingEvent.event, pendingEvent.data);
-        // socket.dispatchEvent(pendingEvent.event, pendingEvent.data);
-      }
-      session.pendingEvents = [];
-    }
-
-    // register the session to the session store
-    sessionStore.saveSession(socket.data.userID, {
-      socketID: socket.id,
-      roomIDs: session ? session.roomIDs : new Set([]),
-      pendingEvents: [],
-      connected: true,
-    });
-
-    console.log(sessionStore.sessions);
-
-    // update session
-    session = sessionStore.findSession(socket.data.userID);
     // Event Handlers
-
     // Create New Room
     socket.on(
       ChatEvents.CreateRoom,
       async (req: ChatType.CreateRoomRequest) => {
+        console.log(`[CHAT] create_room event received`);
         console.log({ req });
         // Create Room
         try {
@@ -124,29 +118,21 @@ export default (
           nsp.to(socket.data.userID).emit(ChatEvents.CreateRoom, res);
 
           console.log(
-            `New room created by ${socket.data.userID}: ${roomId} (${room.name})`
+            `[CHAT] [create_room] New room created by ${socket.data.userID}: ${roomId} (${room.name})`
           );
 
-          // Request user to join the room via invite_room event
+          // Request connected user to join the room via invite_room event
+          // If the user is not connected, when initializing user will join the room based on DB roomIDs
           for (const userID of req.members) {
-            console.log(`User ${userID} is invited to ${roomId}`);
-            const userSession = sessionStore.findSession(userID);
-            console.log(
-              `User ${userID} is ${
-                userSession?.connected ? "connected" : "not connected"
-              }`
-            );
-            if (userSession) console.log(`userSession: ${userSession}`);
-            if (
-              userSession === undefined || // Case: User to invite is never connected before
-              userSession.connected === false // Case: User to invite is not connected currently but was connected before
-            ) {
-              // TODO: Register the room to the user's account
-              addPendingEvent(userID, ChatEvents.InviteRoom, roomId);
-            } else {
-              // Case: User to invite is currently connected
+            if (sessionStore.findSession(userID)?.connected) {
               nsp.to(userID).emit(ChatEvents.InviteRoom, roomId);
             }
+
+            Account.findById(userID)
+              .exec()
+              .then((account) => {
+                account.addChatRoom(roomId);
+              });
           }
         } catch (err) {
           console.error(err);
@@ -159,7 +145,7 @@ export default (
     // Called only when client emits "join_room" event
     socket.on(ChatEvents.JoinRoom, async (id: ChatType.JoinRoomRequest) => {
       console.group(
-        `[join_room] ${socket.data.userID} is trying to join ${id}`
+        `[CHAT] [join_room] ${socket.data.userID} is trying to join ${id}`
       );
 
       try {
@@ -178,7 +164,6 @@ export default (
 
         sessionStore.saveSession(socket.data.userID, {
           ...session,
-          roomIDs: new Set([id.toString(), ...session.roomIDs]),
         });
 
         const res: ChatType.JoinRoomResponse = {
@@ -200,20 +185,20 @@ export default (
     });
 
     // Event: Leave Room
-    socket.on(ChatEvents.LeaveRoom, async ({ roomID }) => {
+    socket.on(ChatEvents.LeaveRoom, async (roomID) => {
       const user = socket.data.userID;
 
-      const delResult = session.roomIDs.delete(roomID);
-      if (!delResult) throw new Error("Room not found in session");
-
-      sessionStore.saveSession(socket.data.userID, {
-        socketID: socket.id,
-        roomIDs: session.roomIDs,
-        pendingEvents: [],
-        connected: true,
-      });
-
+      // Leave the room
       await socket.leave(roomID);
+
+      // Remove room from the user's account
+      const account = await Account.findById(socket.data.userID).exec();
+      account.chatRoomIDs = account.chatRoomIDs.filter(
+        (id) => id.toString() !== roomID.toString()
+      );
+      await account.save();
+
+      // Emit LeaveRoom event to the room
       nsp
         .in(roomID.toString())
         .emit(ChatType.ChatEvents.LeaveRoom, { roomID, user });
@@ -279,7 +264,6 @@ export default (
         // update the connection status of the session
         sessionStore.saveSession(socket.data.userID, {
           socketID: socket.id,
-          roomIDs: session.roomIDs,
           pendingEvents: [],
           connected: false,
         });

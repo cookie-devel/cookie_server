@@ -23,6 +23,7 @@ class InMemorySessionStore<T extends Session> extends SessionStore<T> {
 
   saveSession(id: string, session: T) {
     this.sessions.set(id, session);
+    return this.sessions.get(id);
   }
 
   findAllSessions() {
