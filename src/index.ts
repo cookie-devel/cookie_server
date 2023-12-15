@@ -23,12 +23,15 @@ admin.initializeApp({
     "https://cookie-fire-default-rtdb.asia-southeast1.firebasedatabase.app",
 });
 
-sendTopic("cookie-server", {
-  title: "Cookie Server",
-  subtitle: "Server Message",
-  body: "Server Restarted",
-  imageUrl:
-    "https://file.mk.co.kr/meet/neds/2023/09/image_readtop_2023_711979_16950994225631775.jpg",
+import git from "git-last-commit";
+
+git.getLastCommit((err, commit) => {
+  sendTopic("cookie-server", {
+    title: "Server Restarted",
+    subtitle: commit.author.name,
+    body: commit.subject,
+    imageUrl: "https://picsum.photos/800",
+  });
 });
 
 // ****************************************************
