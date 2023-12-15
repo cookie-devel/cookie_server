@@ -14,11 +14,21 @@ const server = http.createServer(app);
 // ****************************************************
 import admin from "firebase-admin";
 import serviceAccount from "../cookie-fire-firebase-adminsdk-4bs90-48c29705f6.json";
+import { sendPush, sendTopic } from "./utils/push";
 
+// https://firebase.google.com/docs/cloud-messaging/send-message?authuser=0&hl=ko
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
   databaseURL:
     "https://cookie-fire-default-rtdb.asia-southeast1.firebasedatabase.app",
+});
+
+sendTopic("cookie-server", {
+  title: "Cookie Server",
+  subtitle: "Server Message",
+  body: "Server Restarted",
+  imageUrl:
+    "https://file.mk.co.kr/meet/neds/2023/09/image_readtop_2023_711979_16950994225631775.jpg",
 });
 
 // ****************************************************

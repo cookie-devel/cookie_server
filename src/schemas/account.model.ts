@@ -4,7 +4,7 @@
 // There are some bugs (methods won't work) when mongoose infers type when you make static query
 // You should use query field instead of making static method query
 
-import mongoose, { InferSchemaType, Schema } from "mongoose";
+import mongoose, { InferSchemaType, Schema, Types } from "mongoose";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 
@@ -59,14 +59,15 @@ export const AccountSchema = new Schema(
     ],
     chatRoomIDs: [
       {
-        type: mongoose.Types.ObjectId,
+        type: Types.ObjectId,
         ref: "ChatRoom",
       },
     ],
     deviceTokens: [
       {
-        type: String,
+        type: Types.ObjectId,
         required: true,
+        ref: "Device",
       },
     ],
   },

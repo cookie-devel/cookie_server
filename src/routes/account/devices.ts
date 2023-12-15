@@ -1,28 +1,41 @@
 import express from "express";
 import Joi from "joi";
 import Account from "@/schemas/account.model";
+import Device from "@/schemas/device.model";
 import validator from "@/middlewares/validator";
 import { verifyToken } from "@/middlewares/verifyToken";
 
 const router = express.Router();
 
 const schema = Joi.object({
-  deviceToken: Joi.string().required(),
+  udid: Joi.string().required(),
+  token: Joi.string().required(),
 });
 
-router.post("/", verifyToken, validator(schema), async (req, res, next) => {
+router.patch("/", verifyToken, validator(schema), async (req, res, next) => {
+  console.log("PATCH /devices");
   const userid = req.decoded["userid"];
   try {
-    const deviceToken = req.body.deviceToken;
-    const result = await Account.findById(userid).exec();
-    // If deviceToken already exists, return 200
-    if (result.deviceTokens.includes(deviceToken)) {
-      return res.sendStatus(200);
-    }
+    const udid = req.body.udid;
+    const token = req.body.token;
 
-    result.deviceTokens.push(deviceToken);
-    await result.save();
-    return res.sendStatus(201);
+    console.log(udid, token);
+
+    const device = await Device.findOneAndUpdate(
+      { udid },
+      { token },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      }
+    );
+
+    await Account.updateOne(
+      { _id: userid },
+      { $addToSet: { deviceTokens: device._id } }
+    ).exec();
+    return res.sendStatus(200);
   } catch (e: any) {
     console.error(e);
     return next(e);
