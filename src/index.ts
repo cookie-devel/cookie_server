@@ -65,15 +65,6 @@ export const locationNSP = io.of("/location");
 chatNSP.use(verifySocketToken);
 locationNSP.use(verifySocketToken);
 
-// This occurs collision with admin-ui
-// const of = io.of;
-// io.of = (...args) => {
-//   const nsp = of.call(io, ...args);
-//   nsp.use(verifySocketToken);
-//   return nsp;
-// };
-//
-
 const handle = (nsp, handler) => handler(nsp);
 
 // namespace handlers
