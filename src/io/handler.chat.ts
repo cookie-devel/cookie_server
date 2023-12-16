@@ -1,10 +1,11 @@
 import { Session, InMemorySessionStore } from "./sessionStore";
 import type { Socket, Namespace } from "socket.io";
 import type { DefaultEventsMap } from "socket.io/dist/typed-events";
-import ChatModel from "@/schemas/chatroom.model";
+import ChatModel, { ChatRoomSchema } from "@/schemas/chatroom.model";
 import * as ChatType from "@/interfaces/chat";
 import { ChatEvents } from "@/interfaces/chat";
 import Account from "@/schemas/account.model";
+import ChatRoom from "@/schemas/chatroom.model";
 import { getMessaging } from "firebase-admin/messaging";
 import { sendPush, sendChat } from "@/utils/push";
 
@@ -199,6 +200,10 @@ export default (
         (id) => id.toString() !== roomID.toString()
       );
       await account.save();
+
+      const room = await ChatRoom.findById(roomID).exec();
+      room.members = room.members.filter((member) => member !== user);
+      await room.save();
 
       // Emit LeaveRoom event to the room
       nsp
