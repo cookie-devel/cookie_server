@@ -265,8 +265,11 @@ export default (
           //   subtitle: user,
           //   body: payload.text,
           // });
-
-          sendChat(room, {
+          //
+          const membersToPush = room.members.filter(
+            (member) => member !== user
+          );
+          sendChat(roomId, membersToPush, {
             groupKey: roomId,
             title: room.name,
             subtitle: user,

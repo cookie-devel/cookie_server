@@ -125,11 +125,15 @@ const pushTopic = async (topic: string, payload: Payload) => {
   }
 };
 
-const pushChat = async (room: IChatRoom, payload: Payload) => {
+const pushChat = async (
+  roomId: string,
+  members: string[],
+  payload: Payload
+) => {
   const tokens: string[] = (
     (
       await Account.find({
-        _id: { $in: room.members },
+        _id: { $in: members },
       })
         .populate("deviceTokens")
         .select("deviceTokens")
@@ -150,7 +154,7 @@ const pushChat = async (room: IChatRoom, payload: Payload) => {
       android,
       data: {
         type: "chat",
-        chatRoom: room._id.toString(),
+        chatRoom: roomId,
       },
     });
     console.log("Successfully sent message:", response);
