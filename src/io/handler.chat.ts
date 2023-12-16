@@ -6,7 +6,7 @@ import * as ChatType from "@/interfaces/chat";
 import { ChatEvents } from "@/interfaces/chat";
 import Account from "@/schemas/account.model";
 import { getMessaging } from "firebase-admin/messaging";
-import { sendPush } from "@/utils/push";
+import { sendPush, sendChat } from "@/utils/push";
 
 interface ChatSession extends Session {
   pendingEvents: { event: string; data: any }[];
@@ -246,20 +246,27 @@ export default (
           //   this.updatedAt,
           // });
 
-          const tokens: string[] = (
-            (
-              await Account.find({
-                _id: { $in: room.members },
-              })
-                .populate("deviceTokens")
-                .select("deviceTokens")
-                .exec()
-            )
-              .map((account) => account.deviceTokens)
-              .flat() as any
-          ).map((token) => token.token);
+          // const tokens: string[] = (
+          //   (
+          //     await Account.find({
+          //       _id: { $in: room.members },
+          //     })
+          //       .populate("deviceTokens")
+          //       .select("deviceTokens")
+          //       .exec()
+          //   )
+          //     .map((account) => account.deviceTokens)
+          //     .flat() as any
+          // ).map((token) => token.token);
+          //
+          // sendPush(tokens, {
+          //   groupKey: roomId,
+          //   title: room.name,
+          //   subtitle: user,
+          //   body: payload.text,
+          // });
 
-          sendPush(tokens, {
+          sendChat(room, {
             groupKey: roomId,
             title: room.name,
             subtitle: user,

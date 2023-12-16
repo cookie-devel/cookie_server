@@ -8,6 +8,9 @@ import {
   NotificationMessagePayload,
 } from "firebase-admin/messaging";
 
+import Account from "@/schemas/account.model";
+import { IChatRoom } from "@/schemas/chatroom.model";
+
 type Payload = {
   groupKey?: string;
   title?: string;
@@ -24,6 +27,7 @@ const getApnsConfig: (payload: Payload) => ApnsConfig = (payload) => {
     payload: {
       aps: {
         sound: "default",
+        // badge: 1,
         threadId: payload.groupKey,
         alert: {
           title: payload.title,
@@ -31,6 +35,7 @@ const getApnsConfig: (payload: Payload) => ApnsConfig = (payload) => {
           body: payload.body,
           launchImage: payload.imageUrl,
         },
+        mutableContent: true,
       },
     },
   };
@@ -41,6 +46,8 @@ const getAndroidConfig: (payload: Payload) => AndroidConfig = (payload) => {
     collapseKey: payload.groupKey,
     notification: {
       sound: "default",
+      defaultSound: true,
+      priority: "high",
       title: payload.title,
       body: payload.body,
       imageUrl: payload.imageUrl,
@@ -118,6 +125,40 @@ const pushTopic = async (topic: string, payload: Payload) => {
   }
 };
 
+const pushChat = async (room: IChatRoom, payload: Payload) => {
+  const tokens: string[] = (
+    (
+      await Account.find({
+        _id: { $in: room.members },
+      })
+        .populate("deviceTokens")
+        .select("deviceTokens")
+        .exec()
+    )
+      .map((account) => account.deviceTokens)
+      .flat() as any
+  ).map((token) => token.token);
+
+  const apns = getApnsConfig(payload);
+  const android = getAndroidConfig(payload);
+  const notification = getNotification(payload);
+  try {
+    const response = await getMessaging().sendEachForMulticast({
+      tokens,
+      notification,
+      apns,
+      android,
+      data: {
+        type: "chat",
+        chatRoom: room._id.toString(),
+      },
+    });
+    console.log("Successfully sent message:", response);
+  } catch (error) {
+    console.log("Error sending message:", error);
+  }
+};
+
 // const pushTopic = async (topic: string, payload: Payload) => {
 //   const notification = getNotificationMessagePayload(payload);
 //   try {
@@ -130,7 +171,7 @@ const pushTopic = async (topic: string, payload: Payload) => {
 //   }
 // };
 
-export { pushToken as sendPush, pushTopic as sendTopic };
+export { pushToken as sendPush, pushTopic as sendTopic, pushChat as sendChat };
 
 // Two ways to send push notification
 // // By User Token
