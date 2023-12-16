@@ -12,9 +12,9 @@ const server = http.createServer(app);
 // ****************************************************
 // Firebase Admin SDK
 // ****************************************************
+import serviceAccount from "./cookie-fire-firebase-adminsdk-4bs90-48c29705f6.json";
 import admin from "firebase-admin";
-import serviceAccount from "../cookie-fire-firebase-adminsdk-4bs90-48c29705f6.json";
-import { sendPush, sendTopic } from "./utils/push";
+import { sendPush, sendTopic } from "@/utils/push";
 
 // https://firebase.google.com/docs/cloud-messaging/send-message?authuser=0&hl=ko
 admin.initializeApp({
